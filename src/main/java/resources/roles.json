@@ -1,0 +1,31 @@
+{
+  "roles": [
+    {
+      "roleName": "adminsrole",
+      "encryptedColumns": ["authorfio", "bookname", "publishinghousename", "cashierfio"],
+      "tableMappings": {
+        "authorfio": "authors",
+        "bookname": "books",
+        "publishinghousename": "publishinghouse",
+        "cashierfio": "cheque"
+      }
+    },
+    {
+      "roleName": "staffrole",
+      "encryptedColumns": ["authorfio", "bookname", "publishinghousename"],
+      "tableMappings": {
+        "authorfio": "authors",
+        "bookname": "books",
+        "publishinghousename": "publishinghouse"
+      }
+    },
+    {
+      "roleName": "usersrole",
+      "encryptedColumns": ["authorfio", "bookname"],
+      "tableMappings": {
+        "authorfio": "authors",
+        "bookname": "books"
+      }
+    }
+  ]
+}
