@@ -1,14 +1,39 @@
-package org.texttosql;
+package org.texttosql.server;
 
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
-import java.nio.charset.*;
 
+/**
+ * Класс для взаимодействия с базой данных PostgreSQL.
+ */
 public class ConnectWithDb {
+    /**
+     * Хост базы данных
+     */
     private final String host;
+    /**
+     * Имя пользователя базы данных
+     */
     private final String username;
+    /**
+     * Пароль пользователя
+     */
     private final String password;
+    /**
+     * Название базы данных
+     */
     private final String databaseName;
 
+    /**
+     * Конструктор для инициализации параметров подключения
+     *
+     * @param host         Хост базы данных
+     * @param username     Имя пользователя
+     * @param password     Пароль пользователя
+     * @param databaseName Название базы данных
+     */
     public ConnectWithDb(String host, String username, String password, String databaseName) {
         this.host = host;
         this.username = username;
@@ -17,7 +42,10 @@ public class ConnectWithDb {
     }
 
     /**
-     * Проверка, существует ли пользователь
+     * Проверяет существование пользователя в базе данных
+     *
+     * @return "1" если пользователь существует, иначе null
+     * @throws Exception Если произошла ошибка при подключении к базе данных
      */
     public String checkUser() throws Exception {
         String connectionString = "jdbc:postgresql://" + host + "/postgres?charSet=UTF8";
@@ -37,8 +65,11 @@ public class ConnectWithDb {
     }
 
     /**
-     * Выполняет SQL-запрос и возвращает результаты в виде текста.
-     * Если встречаются битые или нечитаемые символы — подставляет ENCODING.
+     * Выполняет SQL-запрос и возвращает результаты в текстовом формате
+     *
+     * @param sql SQL-запрос для выполнения
+     * @return Результаты выполнения запроса в виде строки
+     * @throws Exception Если произошла ошибка при выполнении запроса
      */
     public String results(String sql) throws Exception {
         String connectionString = "jdbc:postgresql://" + host + "/" + databaseName + "?charSet=UTF8";
@@ -87,7 +118,11 @@ public class ConnectWithDb {
     }
 
     /**
-     * Проверка роли пользователя
+     * Проверяет, имеет ли текущий пользователь указанную роль
+     *
+     * @param role Имя роли для проверки
+     * @return true, если пользователь имеет роль, иначе false
+     * @throws Exception Если произошла ошибка при подключении к базе данных
      */
     public boolean currentRole(String role) throws Exception {
         String connectionString = "jdbc:postgresql://" + host + "/postgres?charSet=UTF8";
@@ -107,16 +142,15 @@ public class ConnectWithDb {
     }
 
     /**
-     * Проверяет строку и заменяет битые символы на "ENCODING".
-     * Срабатывает, если:
-     * - содержит символы '�'
-     * - содержит непечатаемые ASCII
-     * - не проходит проверку UTF-8
+     * Проверяет строку на корректность UTF-8 и заменяет некорректные символы на "ENCODING"
+     *
+     * @param text Входная строка для проверки
+     * @return Проверенная строка или "ENCODING" при некорректных символах
      */
     private String sanitizeString(String text) {
         if (text == null || text.isBlank()) return text;
 
-        // Проверка на символы � (replacement char)
+        // Проверка на символы �
         if (text.contains("�")) return "ENCODING";
 
         // Проверка на непечатаемые символы
@@ -126,7 +160,7 @@ public class ConnectWithDb {
             }
         }
 
-        // Проверка на корректную UTF-8 кодировку
+        // Проверка UTF-8
         try {
             CharsetDecoder decoder = StandardCharsets.UTF_8.newDecoder();
             decoder.decode(StandardCharsets.UTF_8.encode(text));
@@ -134,7 +168,6 @@ public class ConnectWithDb {
             return "ENCODING";
         }
 
-        // Если всё в порядке
         return text;
     }
 }

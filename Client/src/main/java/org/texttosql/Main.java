@@ -1,22 +1,49 @@
 package org.texttosql;
 
+import com.google.gson.Gson;
+import org.texttosql.common.LoginRequest;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
+/**
+ * Главный класс клиентского приложения, реализующий интерфейс входа в систему
+ */
 public class Main extends JFrame {
+    /**
+     * Поле для ввода логина
+     */
     private JTextField loginTextField;
+    /**
+     * Поле для ввода пароля
+     */
     private JPasswordField passwordField;
+    /**
+     * Кнопка для входа в систему
+     */
     private CustomButton logInButton;
+    /**
+     * Флажок для запоминания логина
+     */
     private JCheckBox rememberMeCheckBox;
+    /**
+     * Имя файла для сохранения логина
+     */
     private static final String SETTINGS_FILE = "settings.txt";
 
+    /**
+     * Конструктор окна входа в систему
+     */
     public Main() {
-        // Настройки окна
         setTitle("Книжный магазин");
         try {
-            ImageIcon icon = new ImageIcon("IconBookStore.png");
+            ImageIcon icon = new ImageIcon("Client/src/main/resources/IconBookStore.png");
             setIconImage(icon.getImage());
         } catch (Exception e) {
             System.err.println("Иконка не найдена: " + e.getMessage());
@@ -27,7 +54,6 @@ public class Main extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // Панель для входа
         JPanel cardPanel = new JPanel(new GridBagLayout());
         cardPanel.setBackground(new Color(0, 168, 239));
         cardPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
@@ -95,60 +121,70 @@ public class Main extends JFrame {
         formGbc.anchor = GridBagConstraints.CENTER;
         loginForm.add(this.logInButton, formGbc);
 
-        // Слушатель кнопки входа
         this.logInButton.addActionListener(e -> {
-            String username = this.loginTextField.getText();
-            String password = new String(this.passwordField.getPassword());
-            String host = "localhost";
-            String databaseName = "bookstore";
-
-            try {
-                ConnectWithDb connect = new ConnectWithDb(host, username, password, databaseName);
-                String userExists = connect.checkUser();
-                if ("1".equals(userExists)) {
-                    new CreateQuery(host, username, password, databaseName).setVisible(true);
-                    dispose();
-                } else {
-                    JOptionPane.showMessageDialog(null,
-                            "Пользователь не найден", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            String username = loginTextField.getText();
+            String password = new String(passwordField.getPassword());
+            SwingWorker<Map<String, Object>, Void> worker = new SwingWorker<>() {
+                @Override
+                protected Map<String, Object> doInBackground() throws Exception {
+                    HttpClient client = HttpClient.newHttpClient();
+                    Gson gson = new Gson();
+                    LoginRequest reqBody = new LoginRequest(username, password);
+                    HttpRequest req = HttpRequest.newBuilder()
+                            .uri(java.net.URI.create("http://localhost:8080/api/login"))
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(reqBody)))
+                            .build();
+                    HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
+                    return gson.fromJson(resp.body(), Map.class);
                 }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(null,
-                        "Ошибка: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
-            }
+
+                @Override
+                protected void done() {
+                    try {
+                        Map<String, Object> response = get();
+                        if (Boolean.TRUE.equals(response.get("success"))) {
+                            new CreateQuery("localhost", (String) response.get("username"), password, "bookstore").setVisible(true);
+                            dispose();
+                        } else {
+                            JOptionPane.showMessageDialog(null, response.get("message"), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                        }
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(null, "Ошибка: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            };
+            worker.execute();
         });
 
-        // Слушатель галочки "Запомнить"
         this.rememberMeCheckBox.addActionListener(e -> {
-            if (this.rememberMeCheckBox.isSelected()) {
-                this.saveLogin(this.loginTextField.getText());
+            if (rememberMeCheckBox.isSelected()) {
+                saveLogin(loginTextField.getText());
             } else {
-                this.clearLogin();
+                clearLogin();
             }
         });
 
         gbc.gridx = 0;
         gbc.gridy = 0;
         cardPanel.add(loginForm, gbc);
-
         add(cardPanel, BorderLayout.CENTER);
 
-        // Загрузка сохранённого логина после инициализации компонентов
-        this.loadSavedLogin();
+        loadSavedLogin();
     }
 
     /**
-     * Загрузка сохранённого логина при старте
+     * Загружает сохраненный логин из файла настроек
      */
     private void loadSavedLogin() {
-        File file = new File(this.SETTINGS_FILE);
-        if (file.exists() && file.length() > 0) { // Проверка существования и непустоты файла
+        File file = new File(SETTINGS_FILE);
+        if (file.exists() && file.length() > 0) {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(
                     new FileInputStream(file), StandardCharsets.UTF_8))) {
                 String savedLogin = reader.readLine();
                 if (savedLogin != null && !savedLogin.trim().isEmpty()) {
-                    this.loginTextField.setText(savedLogin);
-                    this.rememberMeCheckBox.setSelected(true);
+                    loginTextField.setText(savedLogin);
+                    rememberMeCheckBox.setSelected(true);
                 }
             } catch (IOException e) {
                 System.err.println("Ошибка при загрузке логина: " + e.getMessage());
@@ -157,11 +193,13 @@ public class Main extends JFrame {
     }
 
     /**
-     * Сохранение логина в файл
+     * Сохраняет логин в файл настроек
+     *
+     * @param login Логин для сохранения
      */
     private void saveLogin(String login) {
         try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-                new FileOutputStream(this.SETTINGS_FILE), StandardCharsets.UTF_8))) {
+                new FileOutputStream(SETTINGS_FILE), StandardCharsets.UTF_8))) {
             writer.write(login);
         } catch (IOException e) {
             System.err.println("Ошибка при сохранении логина: " + e.getMessage());
@@ -169,15 +207,20 @@ public class Main extends JFrame {
     }
 
     /**
-     * Очистка сохранённого логина
+     * Очищает сохраненный логин, удаляя файл настроек
      */
     private void clearLogin() {
-        File file = new File(this.SETTINGS_FILE);
+        File file = new File(SETTINGS_FILE);
         if (file.exists()) {
             file.delete();
         }
     }
 
+    /**
+     * Точка входа для запуска клиентского приложения
+     *
+     * @param args Аргументы командной строки
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             Main main = new Main();

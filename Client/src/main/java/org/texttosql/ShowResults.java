@@ -6,14 +6,28 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
 
+/**
+ * Класс для отображения результатов выполнения SQL-запроса в таблице
+ */
 public class ShowResults extends JFrame {
+    /**
+     * Таблица для отображения результатов
+     */
     private JTable resultsTable;
 
-    public ShowResults(String host, String username, String password, String databaseName, String sqlQuery) {
-        // Настройки окна
+    /**
+     * Конструктор окна результатов
+     *
+     * @param host         Хост базы данных
+     * @param username     Имя пользователя
+     * @param password     Пароль пользователя
+     * @param databaseName Название базы данных
+     * @param results      Результаты выполнения SQL-запроса в текстовом формате
+     */
+    public ShowResults(String host, String username, String password, String databaseName, String results) {
         setTitle("Книжный магазин");
         try {
-            ImageIcon icon = new ImageIcon("IconBookStore.png");
+            ImageIcon icon = new ImageIcon("Client/src/main/resources/IconBookStore.png");
             setIconImage(icon.getImage());
         } catch (Exception e) {
             System.err.println("Иконка не найдена: " + e.getMessage());
@@ -24,7 +38,6 @@ public class ShowResults extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // Верхняя панель
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(new Color(0, 120, 215));
         headerPanel.setPreferredSize(new Dimension(getWidth(), 70));
@@ -35,7 +48,7 @@ public class ShowResults extends JFrame {
         titleLabel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
         try {
-            ImageIcon icon = new ImageIcon("IconBookStore.png");
+            ImageIcon icon = new ImageIcon("Client/src/main/resources/IconBookStore.png");
             Image scaledImage = icon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
             JLabel iconLabel = new JLabel(new ImageIcon(scaledImage));
             iconLabel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 10));
@@ -47,7 +60,6 @@ public class ShowResults extends JFrame {
         headerPanel.add(titleLabel, BorderLayout.CENTER);
         add(headerPanel, BorderLayout.NORTH);
 
-        // Таблица
         resultsTable = new JTable();
         resultsTable.setFont(new Font("Roboto", Font.PLAIN, 14));
         resultsTable.setRowHeight(28);
@@ -58,7 +70,6 @@ public class ShowResults extends JFrame {
         resultsTable.setSelectionForeground(Color.WHITE);
         resultsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
-        // Чередование цвета строк
         resultsTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             private final Color evenColor = new Color(245, 248, 250);
             private final Color oddColor = Color.WHITE;
@@ -77,7 +88,6 @@ public class ShowResults extends JFrame {
             }
         });
 
-        // Заголовки таблицы
         JTableHeader header = resultsTable.getTableHeader();
         header.setBackground(new Color(0, 120, 215));
         header.setForeground(Color.WHITE);
@@ -86,18 +96,16 @@ public class ShowResults extends JFrame {
         ((DefaultTableCellRenderer) header.getDefaultRenderer())
                 .setHorizontalAlignment(SwingConstants.CENTER);
 
-        // Скролл
         JScrollPane scroll = new JScrollPane(resultsTable);
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scroll.setBorder(BorderFactory.createEmptyBorder());
         add(scroll, BorderLayout.CENTER);
 
-        // Загрузка данных
         new SwingWorker<Void, Void>() {
             @Override
-            protected Void doInBackground() throws Exception {
-                loadResults(host, username, password, databaseName, sqlQuery);
+            protected Void doInBackground() {
+                loadResults(results);
                 return null;
             }
 
@@ -112,7 +120,6 @@ public class ShowResults extends JFrame {
             }
         }.execute();
 
-        // Автоматическая подгонка при изменении размера окна
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
@@ -122,56 +129,42 @@ public class ShowResults extends JFrame {
     }
 
     /**
-     * Загружает результаты SQL в таблицу
+     * Загружает результаты SQL-запроса в таблицу
+     *
+     * @param result Результаты выполнения SQL-запроса в текстовом формате
      */
-    private void loadResults(String host, String username, String password,
-                             String databaseName, String sqlQuery) {
-        try {
-            ParseQuery parseQuery = new ParseQuery(sqlQuery, host, username, password,
-                    databaseName, "G:\\Учеба ЯрГУ\\ДИПЛОМ\\Text-to-SQL\\src\\main\\java\\resources\\roles.json");
-            String parsedSql = parseQuery.parseSql();
-
-            ConnectWithDb showResult = new ConnectWithDb(host, username, password, databaseName);
-            String result = showResult.results(parsedSql);
-
-            if (result == null || result.isBlank()) {
-                SwingUtilities.invokeLater(() ->
-                        JOptionPane.showMessageDialog(this, "Результат пуст",
-                                "Информация", JOptionPane.INFORMATION_MESSAGE));
-                return;
-            }
-
-            String[] rows = result.split("\n");
-            if (rows.length == 0) return;
-
-            String[] headers = rows[0].trim().split("\\s{2,}|\t");
-            DefaultTableModel model = new DefaultTableModel(headers, 0);
-
-            for (int i = 1; i < rows.length; i++) {
-                String[] cols = rows[i].trim().split("\\s{2,}|\t");
-                model.addRow(cols);
-            }
-
-            SwingUtilities.invokeLater(() -> {
-                resultsTable.setModel(model);
-                resultsTable.setEnabled(false);
-                adjustColumnWidthsToFitWindow();
-            });
-
-        } catch (Exception ex) {
+    private void loadResults(String result) {
+        if (result == null || result.isBlank()) {
             SwingUtilities.invokeLater(() ->
-                    JOptionPane.showMessageDialog(this, "Ошибка: " + ex.getMessage(),
-                            "Ошибка", JOptionPane.ERROR_MESSAGE));
+                    JOptionPane.showMessageDialog(this, "Результат пуст", "Информация", JOptionPane.INFORMATION_MESSAGE));
+            return;
         }
+
+        String[] rows = result.split("\n");
+        if (rows.length == 0) return;
+
+        String[] headers = rows[0].trim().split("\\s{2,}|\t");
+        DefaultTableModel model = new DefaultTableModel(headers, 0);
+
+        for (int i = 1; i < rows.length; i++) {
+            String[] cols = rows[i].trim().split("\\s{2,}|\t");
+            model.addRow(cols);
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            resultsTable.setModel(model);
+            resultsTable.setEnabled(false);
+            adjustColumnWidthsToFitWindow();
+        });
     }
 
     /**
-     * Автоматически распределяет ширину колонок на всю ширину окна
+     * Автоматически распределяет ширину колонок таблицы по ширине окна
      */
     private void adjustColumnWidthsToFitWindow() {
         if (resultsTable.getColumnCount() == 0) return;
 
-        int tableWidth = getWidth() - 60; // небольшой отступ
+        int tableWidth = getWidth() - 60;
         int columnCount = resultsTable.getColumnCount();
         if (columnCount == 0) return;
 
