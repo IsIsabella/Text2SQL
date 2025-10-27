@@ -24,8 +24,8 @@ public class QueryRequest {
     /**
      * Конструктор с параметрами
      *
-     * @param naturalLanguage Запрос на естественном языке
-     * @param tableSelected   Маппинг выбранных таблиц
+     * @param naturalLanguage запрос на естественном языке
+     * @param tableSelected   маппинг выбранных таблиц
      */
     public QueryRequest(String naturalLanguage, Map<String, Boolean> tableSelected) {
         this.naturalLanguage = naturalLanguage;
@@ -35,16 +35,16 @@ public class QueryRequest {
     /**
      * Получает запрос на естественном языке
      *
-     * @return Запрос на естественном языке
+     * @return запрос на естественном языке
      */
     public String getNaturalLanguage() {
-        return naturalLanguage;
+        return this.naturalLanguage;
     }
 
     /**
      * Устанавливает запрос на естественном языке
      *
-     * @param naturalLanguage Запрос на естественном языке
+     * @param naturalLanguage запрос на естественном языке
      */
     public void setNaturalLanguage(String naturalLanguage) {
         this.naturalLanguage = naturalLanguage;
@@ -53,16 +53,16 @@ public class QueryRequest {
     /**
      * Получает маппинг выбранных таблиц
      *
-     * @return Маппинг выбранных таблиц
+     * @return маппинг выбранных таблиц
      */
     public Map<String, Boolean> getTableSelected() {
-        return tableSelected;
+        return this.tableSelected;
     }
 
     /**
      * Устанавливает маппинг выбранных таблиц
      *
-     * @param tableSelected Маппинг выбранных таблиц
+     * @param tableSelected маппинг выбранных таблиц
      */
     public void setTableSelected(Map<String, Boolean> tableSelected) {
         this.tableSelected = tableSelected;

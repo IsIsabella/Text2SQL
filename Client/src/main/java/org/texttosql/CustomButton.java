@@ -33,7 +33,7 @@ public class CustomButton extends JButton {
     /**
      * Конструктор пользовательской кнопки
      *
-     * @param text Текст кнопки
+     * @param text текст кнопки
      */
     public CustomButton(String text) {
         super(text);
@@ -42,32 +42,32 @@ public class CustomButton extends JButton {
         setContentAreaFilled(true);
         setFocusPainted(false);
         setBorderPainted(false);
-        setBackground(defaultColor);
+        setBackground(this.defaultColor);
         setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                isHovered = true;
+                CustomButton.this.isHovered = true;
                 repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                isHovered = false;
-                isPressed = false;
+                CustomButton.this.isHovered = false;
+                CustomButton.this.isPressed = false;
                 repaint();
             }
 
             @Override
             public void mousePressed(MouseEvent e) {
-                isPressed = true;
+                CustomButton.this.isPressed = true;
                 repaint();
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                isPressed = false;
+                CustomButton.this.isPressed = false;
                 repaint();
             }
         });
@@ -76,19 +76,19 @@ public class CustomButton extends JButton {
     /**
      * Отрисовывает кнопку с учетом состояния (наведение, нажатие)
      *
-     * @param g Графический контекст для отрисовки
+     * @param g графический контекст для отрисовки
      */
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        if (isPressed) {
-            g2.setColor(pressedColor);
-        } else if (isHovered) {
-            g2.setColor(hoverColor);
+        if (CustomButton.this.isPressed) {
+            g2.setColor(this.pressedColor);
+        } else if (CustomButton.this.isHovered) {
+            g2.setColor(this.hoverColor);
         } else {
-            g2.setColor(defaultColor);
+            g2.setColor(this.defaultColor);
         }
         g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
         super.paintComponent(g);

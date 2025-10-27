@@ -22,7 +22,7 @@ public class ResultsResponse {
     /**
      * Конструктор с успешными результатами
      *
-     * @param results Результаты выполнения SQL-запроса
+     * @param results результаты выполнения SQL-запроса
      */
     public ResultsResponse(String results) {
         this.results = results;
@@ -31,8 +31,8 @@ public class ResultsResponse {
     /**
      * Конструктор с результатами и ошибкой
      *
-     * @param results Результаты выполнения SQL-запроса (может быть null)
-     * @param error   Сообщение об ошибке
+     * @param results результаты выполнения SQL-запроса (может быть null)
+     * @param error   сообщение об ошибке
      */
     public ResultsResponse(String results, String error) {
         this.results = results;
@@ -42,16 +42,16 @@ public class ResultsResponse {
     /**
      * Получает результаты выполнения SQL-запроса
      *
-     * @return Результаты выполнения SQL-запроса
+     * @return результаты выполнения SQL-запроса
      */
     public String getResults() {
-        return results;
+        return this.results;
     }
 
     /**
      * Устанавливает результаты выполнения SQL-запроса
      *
-     * @param results Результаты выполнения SQL-запроса
+     * @param results результаты выполнения SQL-запроса
      */
     public void setResults(String results) {
         this.results = results;
@@ -60,16 +60,16 @@ public class ResultsResponse {
     /**
      * Получает сообщение об ошибке
      *
-     * @return Сообщение об ошибке
+     * @return сообщение об ошибке
      */
     public String getError() {
-        return error;
+        return this.error;
     }
 
     /**
      * Устанавливает сообщение об ошибке
      *
-     * @param error Сообщение об ошибке
+     * @param error сообщение об ошибке
      */
     public void setError(String error) {
         this.error = error;

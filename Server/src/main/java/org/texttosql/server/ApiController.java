@@ -3,7 +3,10 @@ package org.texttosql.server;
 import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.texttosql.common.LoginRequest;
 import org.texttosql.common.QueryRequest;
 import org.texttosql.common.ResultsResponse;
@@ -46,7 +49,7 @@ public class ApiController {
         try {
             String question = request.getNaturalLanguage();
             ConnectToDeepSeek connect = new ConnectToDeepSeek();
-            String sql = connect.generateSql(question, null); // tableSelected не используется
+            String sql = connect.generateSql(question);
             return ResponseEntity.ok(new SqlResponse(sql));
         } catch (Exception e) {
             return ResponseEntity.ok(new SqlResponse(null, e.getMessage()));

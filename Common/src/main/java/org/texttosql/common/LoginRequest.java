@@ -22,8 +22,8 @@ public class LoginRequest {
     /**
      * Конструктор с параметрами
      *
-     * @param username Имя пользователя
-     * @param password Пароль пользователя
+     * @param username имя пользователя
+     * @param password пароль пользователя
      */
     public LoginRequest(String username, String password) {
         this.username = username;
@@ -33,16 +33,16 @@ public class LoginRequest {
     /**
      * Получает имя пользователя
      *
-     * @return Имя пользователя
+     * @return имя пользователя
      */
     public String getUsername() {
-        return username;
+        return this.username;
     }
 
     /**
      * Устанавливает имя пользователя
      *
-     * @param username Имя пользователя
+     * @param username имя пользователя
      */
     public void setUsername(String username) {
         this.username = username;
@@ -51,16 +51,16 @@ public class LoginRequest {
     /**
      * Получает пароль пользователя
      *
-     * @return Пароль пользователя
+     * @return пароль пользователя
      */
     public String getPassword() {
-        return password;
+        return this.password;
     }
 
     /**
      * Устанавливает пароль пользователя
      *
-     * @param password Пароль пользователя
+     * @param password пароль пользователя
      */
     public void setPassword(String password) {
         this.password = password;

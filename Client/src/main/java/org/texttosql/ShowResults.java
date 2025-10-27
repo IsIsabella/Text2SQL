@@ -18,11 +18,11 @@ public class ShowResults extends JFrame {
     /**
      * Конструктор окна результатов
      *
-     * @param host         Хост базы данных
-     * @param username     Имя пользователя
-     * @param password     Пароль пользователя
-     * @param databaseName Название базы данных
-     * @param results      Результаты выполнения SQL-запроса в текстовом формате
+     * @param host         хост базы данных
+     * @param username     имя пользователя
+     * @param password     пароль пользователя
+     * @param databaseName название базы данных
+     * @param results      результаты выполнения SQL-запроса в текстовом формате
      */
     public ShowResults(String host, String username, String password, String databaseName, String results) {
         setTitle("Книжный магазин");
@@ -60,17 +60,17 @@ public class ShowResults extends JFrame {
         headerPanel.add(titleLabel, BorderLayout.CENTER);
         add(headerPanel, BorderLayout.NORTH);
 
-        resultsTable = new JTable();
-        resultsTable.setFont(new Font("Roboto", Font.PLAIN, 14));
-        resultsTable.setRowHeight(28);
-        resultsTable.setGridColor(new Color(220, 220, 220));
-        resultsTable.setShowGrid(true);
-        resultsTable.setFillsViewportHeight(true);
-        resultsTable.setSelectionBackground(new Color(0, 120, 215));
-        resultsTable.setSelectionForeground(Color.WHITE);
-        resultsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        this.resultsTable = new JTable();
+        this.resultsTable.setFont(new Font("Roboto", Font.PLAIN, 14));
+        this.resultsTable.setRowHeight(28);
+        this.resultsTable.setGridColor(new Color(220, 220, 220));
+        this.resultsTable.setShowGrid(true);
+        this.resultsTable.setFillsViewportHeight(true);
+        this.resultsTable.setSelectionBackground(new Color(0, 120, 215));
+        this.resultsTable.setSelectionForeground(Color.WHITE);
+        this.resultsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
-        resultsTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+        this.resultsTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             private final Color evenColor = new Color(245, 248, 250);
             private final Color oddColor = Color.WHITE;
 
@@ -88,7 +88,7 @@ public class ShowResults extends JFrame {
             }
         });
 
-        JTableHeader header = resultsTable.getTableHeader();
+        JTableHeader header = this.resultsTable.getTableHeader();
         header.setBackground(new Color(0, 120, 215));
         header.setForeground(Color.WHITE);
         header.setFont(new Font("Roboto", Font.BOLD, 15));
@@ -96,7 +96,7 @@ public class ShowResults extends JFrame {
         ((DefaultTableCellRenderer) header.getDefaultRenderer())
                 .setHorizontalAlignment(SwingConstants.CENTER);
 
-        JScrollPane scroll = new JScrollPane(resultsTable);
+        JScrollPane scroll = new JScrollPane(this.resultsTable);
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -105,7 +105,7 @@ public class ShowResults extends JFrame {
         new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() {
-                loadResults(results);
+                ShowResults.this.loadResults(results);
                 return null;
             }
 
@@ -123,7 +123,7 @@ public class ShowResults extends JFrame {
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
-                adjustColumnWidthsToFitWindow();
+                ShowResults.this.adjustColumnWidthsToFitWindow();
             }
         });
     }
@@ -131,7 +131,7 @@ public class ShowResults extends JFrame {
     /**
      * Загружает результаты SQL-запроса в таблицу
      *
-     * @param result Результаты выполнения SQL-запроса в текстовом формате
+     * @param result результаты выполнения SQL-запроса в текстовом формате
      */
     private void loadResults(String result) {
         if (result == null || result.isBlank()) {
@@ -152,9 +152,9 @@ public class ShowResults extends JFrame {
         }
 
         SwingUtilities.invokeLater(() -> {
-            resultsTable.setModel(model);
-            resultsTable.setEnabled(false);
-            adjustColumnWidthsToFitWindow();
+            this.resultsTable.setModel(model);
+            this.resultsTable.setEnabled(false);
+            this.adjustColumnWidthsToFitWindow();
         });
     }
 
@@ -162,19 +162,19 @@ public class ShowResults extends JFrame {
      * Автоматически распределяет ширину колонок таблицы по ширине окна
      */
     private void adjustColumnWidthsToFitWindow() {
-        if (resultsTable.getColumnCount() == 0) return;
+        if (this.resultsTable.getColumnCount() == 0) return;
 
         int tableWidth = getWidth() - 60;
-        int columnCount = resultsTable.getColumnCount();
+        int columnCount = this.resultsTable.getColumnCount();
         if (columnCount == 0) return;
 
         int baseWidth = tableWidth / columnCount;
 
         for (int column = 0; column < columnCount; column++) {
-            resultsTable.getColumnModel().getColumn(column).setPreferredWidth(baseWidth);
+            this.resultsTable.getColumnModel().getColumn(column).setPreferredWidth(baseWidth);
         }
 
-        resultsTable.revalidate();
-        resultsTable.repaint();
+        this.resultsTable.revalidate();
+        this.resultsTable.repaint();
     }
 }

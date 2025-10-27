@@ -22,7 +22,7 @@ public class SqlResponse {
     /**
      * Конструктор с успешным SQL-запросом
      *
-     * @param sql Сгенерированный SQL-запрос
+     * @param sql сгенерированный SQL-запрос
      */
     public SqlResponse(String sql) {
         this.sql = sql;
@@ -31,8 +31,8 @@ public class SqlResponse {
     /**
      * Конструктор с SQL-запросом и ошибкой
      *
-     * @param sql   Сгенерированный SQL-запрос (может быть null)
-     * @param error Сообщение об ошибке
+     * @param sql   сгенерированный SQL-запрос (может быть null)
+     * @param error сообщение об ошибке
      */
     public SqlResponse(String sql, String error) {
         this.sql = sql;
@@ -45,7 +45,7 @@ public class SqlResponse {
      * @return SQL-запрос
      */
     public String getSql() {
-        return sql;
+        return this.sql;
     }
 
     /**
@@ -60,16 +60,16 @@ public class SqlResponse {
     /**
      * Получает сообщение об ошибке
      *
-     * @return Сообщение об ошибке
+     * @return сообщение об ошибке
      */
     public String getError() {
-        return error;
+        return this.error;
     }
 
     /**
      * Устанавливает сообщение об ошибке
      *
-     * @param error Сообщение об ошибке
+     * @param error сообщение об ошибке
      */
     public void setError(String error) {
         this.error = error;

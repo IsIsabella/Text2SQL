@@ -45,14 +45,14 @@ public class ConnectWithDb {
      * Проверяет существование пользователя в базе данных
      *
      * @return "1" если пользователь существует, иначе null
-     * @throws Exception Если произошла ошибка при подключении к базе данных
+     * @throws Exception если произошла ошибка при подключении к базе данных
      */
     public String checkUser() throws Exception {
-        String connectionString = "jdbc:postgresql://" + host + "/postgres?charSet=UTF8";
-        try (Connection conn = DriverManager.getConnection(connectionString, username, password)) {
+        String connectionString = "jdbc:postgresql://" + this.host + "/postgres?charSet=UTF8";
+        try (Connection conn = DriverManager.getConnection(connectionString, this.username, this.password)) {
             String sql = "SELECT 1 FROM pg_roles WHERE rolname = ?";
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, username);
+                stmt.setString(1, this.username);
                 ResultSet rs = stmt.executeQuery();
                 if (rs.next()) {
                     return rs.getString(1);
@@ -68,14 +68,14 @@ public class ConnectWithDb {
      * Выполняет SQL-запрос и возвращает результаты в текстовом формате
      *
      * @param sql SQL-запрос для выполнения
-     * @return Результаты выполнения запроса в виде строки
-     * @throws Exception Если произошла ошибка при выполнении запроса
+     * @return результаты выполнения запроса в виде строки
+     * @throws Exception если произошла ошибка при выполнении запроса
      */
     public String results(String sql) throws Exception {
-        String connectionString = "jdbc:postgresql://" + host + "/" + databaseName + "?charSet=UTF8";
+        String connectionString = "jdbc:postgresql://" + this.host + "/" + this.databaseName + "?charSet=UTF8";
         StringBuilder result = new StringBuilder();
 
-        try (Connection conn = DriverManager.getConnection(connectionString, username, password);
+        try (Connection conn = DriverManager.getConnection(connectionString, this.username, this.password);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
@@ -99,7 +99,7 @@ public class ConnectWithDb {
                         } else if (obj instanceof byte[]) {
                             value = "BINARY_DATA";
                         } else {
-                            value = sanitizeString(obj.toString());
+                            value = this.sanitizeString(obj.toString());
                         }
                     } catch (Exception e) {
                         value = "ENCODING";
@@ -120,13 +120,13 @@ public class ConnectWithDb {
     /**
      * Проверяет, имеет ли текущий пользователь указанную роль
      *
-     * @param role Имя роли для проверки
+     * @param role имя роли для проверки
      * @return true, если пользователь имеет роль, иначе false
-     * @throws Exception Если произошла ошибка при подключении к базе данных
+     * @throws Exception если произошла ошибка при подключении к базе данных
      */
     public boolean currentRole(String role) throws Exception {
-        String connectionString = "jdbc:postgresql://" + host + "/postgres?charSet=UTF8";
-        try (Connection conn = DriverManager.getConnection(connectionString, username, password)) {
+        String connectionString = "jdbc:postgresql://" + this.host + "/postgres?charSet=UTF8";
+        try (Connection conn = DriverManager.getConnection(connectionString, this.username, this.password)) {
             String sql = "SELECT pg_has_role(current_user, ?, 'MEMBER')";
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, role);
@@ -144,8 +144,8 @@ public class ConnectWithDb {
     /**
      * Проверяет строку на корректность UTF-8 и заменяет некорректные символы на "ENCODING"
      *
-     * @param text Входная строка для проверки
-     * @return Проверенная строка или "ENCODING" при некорректных символах
+     * @param text входная строка для проверки
+     * @return проверенная строка или "ENCODING" при некорректных символах
      */
     private String sanitizeString(String text) {
         if (text == null || text.isBlank()) return text;

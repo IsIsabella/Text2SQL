@@ -1,7 +1,9 @@
 package org.texttosql;
 
 import com.google.gson.Gson;
-import org.texttosql.common.*;
+import org.texttosql.common.QueryRequest;
+import org.texttosql.common.ResultsResponse;
+import org.texttosql.common.SqlResponse;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,24 +19,34 @@ import java.util.Map;
  * Класс для создания и отправки запросов на естественном языке и отображения SQL
  */
 public class CreateQuery extends JFrame {
-    /** Текстовое поле для ввода запроса на естественном языке */
+    /**
+     * Текстовое поле для ввода запроса на естественном языке
+     */
     private JTextArea naturalLanguageArea;
-    /** Текстовое поле для отображения SQL-запроса */
+    /**
+     * Текстовое поле для отображения SQL-запроса
+     */
     private JTextArea sqlArea;
-    /** Маппинг выбранных таблиц (имя таблицы -> выбрана ли) */
+    /**
+     * Маппинг выбранных таблиц (имя таблицы -> выбрана ли)
+     */
     private Map<String, Boolean> tableSelected = new HashMap<>();
-    /** Флаг, указывающий, была ли нажата кнопка генерации SQL */
+    /**
+     * Флаг, указывающий, была ли нажата кнопка генерации SQL
+     */
     private boolean showSQLClicked = false;
-    /** Метка для отображения статуса операции */
+    /**
+     * Метка для отображения статуса операции
+     */
     private JLabel statusLabel = new JLabel("Готово", SwingConstants.CENTER);
 
     /**
      * Конструктор окна создания запросов
      *
-     * @param host         Хост базы данных
-     * @param username     Имя пользователя
-     * @param password     Пароль пользователя
-     * @param databaseName Название базы данных
+     * @param host         хост базы данных
+     * @param username     имя пользователя
+     * @param password     пароль пользователя
+     * @param databaseName название базы данных
      */
     public CreateQuery(String host, String username, String password, String databaseName) {
         setTitle("Книжный магазин");
@@ -94,12 +106,12 @@ public class CreateQuery extends JFrame {
         formGbc.gridwidth = 2;
         contentPanel.add(label1, formGbc);
 
-        naturalLanguageArea = new JTextArea(10, 50);
-        naturalLanguageArea.setFont(new Font("Roboto", Font.PLAIN, 14));
-        naturalLanguageArea.setLineWrap(true);
-        naturalLanguageArea.setWrapStyleWord(true);
-        naturalLanguageArea.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
-        JScrollPane scroll1 = new JScrollPane(naturalLanguageArea);
+        this.naturalLanguageArea = new JTextArea(10, 50);
+        this.naturalLanguageArea.setFont(new Font("Roboto", Font.PLAIN, 14));
+        this.naturalLanguageArea.setLineWrap(true);
+        this.naturalLanguageArea.setWrapStyleWord(true);
+        this.naturalLanguageArea.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+        JScrollPane scroll1 = new JScrollPane(this.naturalLanguageArea);
         formGbc.gridy = 1;
         formGbc.gridwidth = 2;
         formGbc.weightx = 1.0;
@@ -124,28 +136,32 @@ public class CreateQuery extends JFrame {
             btn.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
             btn.setOpaque(true);
             btn.setFocusPainted(false);
-            tableSelected.put(table, false);
+            this.tableSelected.put(table, false);
             btn.addActionListener(e -> {
-                boolean isSelected = !tableSelected.get(table);
-                tableSelected.put(table, isSelected);
+                boolean isSelected = !this.tableSelected.get(table);
+                this.tableSelected.put(table, isSelected);
                 btn.setBackground(isSelected ? new Color(200, 200, 200) : Color.WHITE);
             });
             btn.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseEntered(MouseEvent e) {
-                    if (!tableSelected.get(table)) btn.setBackground(new Color(230, 230, 230));
+                    if (!CreateQuery.this.tableSelected.get(table)) btn.setBackground(new Color(230, 230, 230));
                 }
+
                 @Override
                 public void mouseExited(MouseEvent e) {
-                    if (!tableSelected.get(table)) btn.setBackground(Color.WHITE);
+                    if (!CreateQuery.this.tableSelected.get(table)) btn.setBackground(Color.WHITE);
                 }
+
                 @Override
                 public void mousePressed(MouseEvent e) {
                     btn.setBackground(new Color(180, 180, 180));
                 }
+
                 @Override
                 public void mouseReleased(MouseEvent e) {
-                    btn.setBackground(tableSelected.get(table) ? new Color(200, 200, 200) : Color.WHITE);
+                    btn.setBackground(CreateQuery.this.tableSelected.get(table) ?
+                            new Color(200, 200, 200) : Color.WHITE);
                 }
             });
             tablesPanel.add(btn);
@@ -168,20 +184,21 @@ public class CreateQuery extends JFrame {
         contentPanel.add(showSQLButton, formGbc);
 
         showSQLButton.addActionListener(e -> {
-            showSQLClicked = true;
-            String question = naturalLanguageArea.getText().trim();
+            this.showSQLClicked = true;
+            String question = this.naturalLanguageArea.getText().trim();
             if (question.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Введите запрос на естественном языке.", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null,
+                        "Введите запрос на естественном языке.", "Ошибка", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             showSQLButton.setEnabled(false);
-            statusLabel.setText("Генерация запроса...");
+            this.statusLabel.setText("Генерация запроса...");
             SwingWorker<SqlResponse, Void> worker = new SwingWorker<>() {
                 @Override
                 protected SqlResponse doInBackground() throws Exception {
                     HttpClient client = HttpClient.newHttpClient();
                     Gson gson = new Gson();
-                    QueryRequest reqBody = new QueryRequest(question, tableSelected);
+                    QueryRequest reqBody = new QueryRequest(question, CreateQuery.this.tableSelected);
                     HttpRequest req = HttpRequest.newBuilder()
                             .uri(java.net.URI.create("http://localhost:8080/api/generate-sql?username=" + username))
                             .header("Content-Type", "application/json")
@@ -196,15 +213,17 @@ public class CreateQuery extends JFrame {
                     try {
                         SqlResponse response = get();
                         if (response.getError() == null) {
-                            sqlArea.setText(response.getSql());
-                            statusLabel.setText("Готово");
+                            CreateQuery.this.sqlArea.setText(response.getSql());
+                            CreateQuery.this.statusLabel.setText("Готово");
                         } else {
-                            JOptionPane.showMessageDialog(null, "Ошибка: " + response.getError(), "Ошибка", JOptionPane.ERROR_MESSAGE);
-                            statusLabel.setText("Ошибка при генерации");
+                            JOptionPane.showMessageDialog(null,
+                                    "Ошибка: " + response.getError(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                            CreateQuery.this.statusLabel.setText("Ошибка при генерации");
                         }
                     } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(null, "Ошибка: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
-                        statusLabel.setText("Ошибка при генерации");
+                        JOptionPane.showMessageDialog(null,
+                                "Ошибка: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                        CreateQuery.this.statusLabel.setText("Ошибка при генерации");
                     } finally {
                         showSQLButton.setEnabled(true);
                     }
@@ -220,12 +239,12 @@ public class CreateQuery extends JFrame {
         formGbc.anchor = GridBagConstraints.WEST;
         contentPanel.add(label3, formGbc);
 
-        sqlArea = new JTextArea(12, 50);
-        sqlArea.setFont(new Font("Roboto", Font.PLAIN, 14));
-        sqlArea.setLineWrap(true);
-        sqlArea.setWrapStyleWord(true);
-        sqlArea.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
-        JScrollPane scroll2 = new JScrollPane(sqlArea);
+        this.sqlArea = new JTextArea(12, 50);
+        this.sqlArea.setFont(new Font("Roboto", Font.PLAIN, 14));
+        this.sqlArea.setLineWrap(true);
+        this.sqlArea.setWrapStyleWord(true);
+        this.sqlArea.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+        JScrollPane scroll2 = new JScrollPane(this.sqlArea);
         formGbc.gridy = 6;
         formGbc.gridwidth = 2;
         formGbc.weightx = 1.0;
@@ -245,13 +264,14 @@ public class CreateQuery extends JFrame {
         contentPanel.add(sendSQLButton, formGbc);
 
         sendSQLButton.addActionListener(e -> {
-            String sql = sqlArea.getText();
+            String sql = this.sqlArea.getText();
             if (sql.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "SQL-запрос пуст.", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null,
+                        "SQL-запрос пуст.", "Ошибка", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             sendSQLButton.setEnabled(false);
-            statusLabel.setText("Выполнение запроса...");
+            CreateQuery.this.statusLabel.setText("Выполнение запроса...");
             SwingWorker<ResultsResponse, Void> worker = new SwingWorker<>() {
                 @Override
                 protected ResultsResponse doInBackground() throws Exception {
@@ -275,25 +295,28 @@ public class CreateQuery extends JFrame {
                     try {
                         ResultsResponse response = get();
                         if (response.getError() == null) {
-                            new ShowResults("localhost", username, password, "bookstore", response.getResults()).setVisible(true);
-                            if (showSQLClicked) {
+                            new ShowResults("localhost", username, password,
+                                    "bookstore", response.getResults()).setVisible(true);
+                            if (CreateQuery.this.showSQLClicked) {
                                 for (Component comp : tablesPanel.getComponents()) {
                                     if (comp instanceof JButton) {
                                         comp.setBackground(Color.WHITE);
-                                        tableSelected.put(((JButton) comp).getText(), false);
+                                        CreateQuery.this.tableSelected.put(((JButton) comp).getText(), false);
                                     }
                                 }
-                                showSQLClicked = false;
+                                CreateQuery.this.showSQLClicked = false;
                             }
-                            naturalLanguageArea.setText("");
-                            statusLabel.setText("Готово");
+                            CreateQuery.this.naturalLanguageArea.setText("");
+                            CreateQuery.this.statusLabel.setText("Готово");
                         } else {
-                            JOptionPane.showMessageDialog(null, "Ошибка: " + response.getError(), "Ошибка", JOptionPane.ERROR_MESSAGE);
-                            statusLabel.setText("Ошибка при выполнении");
+                            JOptionPane.showMessageDialog(null,
+                                    "Ошибка: " + response.getError(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                            CreateQuery.this.statusLabel.setText("Ошибка при выполнении");
                         }
                     } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(null, "Ошибка: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
-                        statusLabel.setText("Ошибка при выполнении");
+                        JOptionPane.showMessageDialog(null,
+                                "Ошибка: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                        CreateQuery.this.statusLabel.setText("Ошибка при выполнении");
                     } finally {
                         sendSQLButton.setEnabled(true);
                     }
@@ -306,8 +329,8 @@ public class CreateQuery extends JFrame {
         formGbc.gridwidth = 2;
         formGbc.weighty = 0.0;
         formGbc.fill = GridBagConstraints.HORIZONTAL;
-        statusLabel.setFont(new Font("Roboto", Font.PLAIN, 14));
-        contentPanel.add(statusLabel, formGbc);
+        CreateQuery.this.statusLabel.setFont(new Font("Roboto", Font.PLAIN, 14));
+        contentPanel.add(CreateQuery.this.statusLabel, formGbc);
 
         gbc.gridx = 0;
         gbc.gridy = 0;

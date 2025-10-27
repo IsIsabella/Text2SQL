@@ -122,8 +122,8 @@ public class Main extends JFrame {
         loginForm.add(this.logInButton, formGbc);
 
         this.logInButton.addActionListener(e -> {
-            String username = loginTextField.getText();
-            String password = new String(passwordField.getPassword());
+            String username = this.loginTextField.getText();
+            String password = new String(this.passwordField.getPassword());
             SwingWorker<Map<String, Object>, Void> worker = new SwingWorker<>() {
                 @Override
                 protected Map<String, Object> doInBackground() throws Exception {
@@ -158,10 +158,10 @@ public class Main extends JFrame {
         });
 
         this.rememberMeCheckBox.addActionListener(e -> {
-            if (rememberMeCheckBox.isSelected()) {
-                saveLogin(loginTextField.getText());
+            if (this.rememberMeCheckBox.isSelected()) {
+                this.saveLogin(this.loginTextField.getText());
             } else {
-                clearLogin();
+                this.clearLogin();
             }
         });
 
@@ -170,21 +170,21 @@ public class Main extends JFrame {
         cardPanel.add(loginForm, gbc);
         add(cardPanel, BorderLayout.CENTER);
 
-        loadSavedLogin();
+        this.loadSavedLogin();
     }
 
     /**
      * Загружает сохраненный логин из файла настроек
      */
     private void loadSavedLogin() {
-        File file = new File(SETTINGS_FILE);
+        File file = new File(Main.SETTINGS_FILE);
         if (file.exists() && file.length() > 0) {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(
                     new FileInputStream(file), StandardCharsets.UTF_8))) {
                 String savedLogin = reader.readLine();
                 if (savedLogin != null && !savedLogin.trim().isEmpty()) {
-                    loginTextField.setText(savedLogin);
-                    rememberMeCheckBox.setSelected(true);
+                    this.loginTextField.setText(savedLogin);
+                    this.rememberMeCheckBox.setSelected(true);
                 }
             } catch (IOException e) {
                 System.err.println("Ошибка при загрузке логина: " + e.getMessage());
@@ -195,11 +195,11 @@ public class Main extends JFrame {
     /**
      * Сохраняет логин в файл настроек
      *
-     * @param login Логин для сохранения
+     * @param login логин для сохранения
      */
     private void saveLogin(String login) {
         try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-                new FileOutputStream(SETTINGS_FILE), StandardCharsets.UTF_8))) {
+                new FileOutputStream(Main.SETTINGS_FILE), StandardCharsets.UTF_8))) {
             writer.write(login);
         } catch (IOException e) {
             System.err.println("Ошибка при сохранении логина: " + e.getMessage());
@@ -210,7 +210,7 @@ public class Main extends JFrame {
      * Очищает сохраненный логин, удаляя файл настроек
      */
     private void clearLogin() {
-        File file = new File(SETTINGS_FILE);
+        File file = new File(Main.SETTINGS_FILE);
         if (file.exists()) {
             file.delete();
         }
@@ -219,7 +219,7 @@ public class Main extends JFrame {
     /**
      * Точка входа для запуска клиентского приложения
      *
-     * @param args Аргументы командной строки
+     * @param args аргументы командной строки
      */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {

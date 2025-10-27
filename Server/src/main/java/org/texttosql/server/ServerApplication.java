@@ -11,7 +11,7 @@ public class ServerApplication {
     /**
      * Точка входа для запуска сервера
      *
-     * @param args Аргументы командной строки
+     * @param args аргументы командной строки
      */
     public static void main(String[] args) {
         SpringApplication.run(ServerApplication.class, args);

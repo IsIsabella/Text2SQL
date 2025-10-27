@@ -39,7 +39,7 @@ public class SqlValidator {
      * Валидирует SQL-запрос
      *
      * @param sql SQL-запрос для проверки
-     * @throws Exception Если запрос содержит запрещенные элементы
+     * @throws Exception если запрос содержит запрещенные элементы
      */
     public void validate(String sql) throws Exception {
         if (sql == null || sql.trim().isEmpty()) {
@@ -95,8 +95,8 @@ public class SqlValidator {
     /**
      * Нормализует SQL: приводит к нижнему регистру, удаляет комментарии
      *
-     * @param sql Исходный SQL
-     * @return Нормализованный SQL
+     * @param sql исходный SQL
+     * @return нормализованный SQL
      */
     private String normalizeSql(String sql) {
         // Удаление однострочных комментариев
@@ -110,7 +110,7 @@ public class SqlValidator {
     /**
      * Извлекает имена CTE (алиасы) из WITH-части
      *
-     * @param normalized Нормализованный SQL
+     * @param normalized нормализованный SQL
      * @return Set с именами CTE
      */
     private Set<String> extractCteNames(String normalized) {
@@ -126,10 +126,9 @@ public class SqlValidator {
     }
 
     /**
-     * Извлекает имена таблиц из SQL-запроса, игнорируя алиасы (например, 'Books B')
-     * Поддерживает FROM, JOIN и подзапросы (рекурсивно)
+     * Извлекает имена таблиц из SQL-запроса, игнорируя алиасы
      *
-     * @param normalized Нормализованный SQL
+     * @param normalized нормализованный SQL
      * @return Set с именами таблиц
      */
     private Set<String> extractTables(String normalized) {
@@ -161,9 +160,9 @@ public class SqlValidator {
     /**
      * Находит соответствующую закрывающую скобку для открывающей
      *
-     * @param sql SQL-строка
-     * @param start Индекс открывающей скобки
-     * @return Индекс закрывающей скобки или -1
+     * @param sql   SQL-строка
+     * @param start индекс открывающей скобки
+     * @return индекс закрывающей скобки или -1
      */
     private int findMatchingClosingParen(String sql, int start) {
         int count = 0;
