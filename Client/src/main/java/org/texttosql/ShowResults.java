@@ -1,5 +1,7 @@
 package org.texttosql;
 
+import net.jcip.annotations.NotThreadSafe;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
@@ -9,6 +11,7 @@ import java.awt.*;
 /**
  * Класс для отображения результатов выполнения SQL-запроса в таблице
  */
+@NotThreadSafe
 public class ShowResults extends JFrame {
     /**
      * Таблица для отображения результатов

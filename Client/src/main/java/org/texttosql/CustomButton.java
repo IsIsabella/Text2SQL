@@ -1,5 +1,7 @@
 package org.texttosql;
 
+import net.jcip.annotations.NotThreadSafe;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -8,6 +10,7 @@ import java.awt.event.MouseEvent;
 /**
  * Пользовательская кнопка с кастомным стилем и эффектами наведения/нажатия
  */
+@NotThreadSafe
 public class CustomButton extends JButton {
     /**
      * Цвет кнопки по умолчанию

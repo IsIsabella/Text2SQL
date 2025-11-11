@@ -1,8 +1,11 @@
 package org.texttosql.common;
 
+import net.jcip.annotations.NotThreadSafe;
+
 /**
  * DTO для передачи результатов выполнения SQL-запроса или ошибки от сервера к клиенту
  */
+@NotThreadSafe
 public class ResultsResponse {
     /**
      * Результаты выполнения SQL-запроса в текстовом формате
@@ -73,5 +76,23 @@ public class ResultsResponse {
      */
     public void setError(String error) {
         this.error = error;
+    }
+
+    /**
+     * Успешный результат
+     *
+     * @param result результат выполнения SQL-запроса
+     */
+    public static ResultsResponse success(String result) {
+        return new ResultsResponse(result, null);
+    }
+
+    /**
+     * Ошибка
+     *
+     * @param error сообщение об ошибке
+     */
+    public static ResultsResponse error(String error) {
+        return new ResultsResponse(null, error);
     }
 }

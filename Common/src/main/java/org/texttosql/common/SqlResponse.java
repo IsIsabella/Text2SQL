@@ -1,8 +1,11 @@
 package org.texttosql.common;
 
+import net.jcip.annotations.NotThreadSafe;
+
 /**
  * Класс для передачи сгенерированного SQL-запроса или ошибки от сервера к клиенту
  */
+@NotThreadSafe
 public class SqlResponse {
     /**
      * Сгенерированный SQL-запрос

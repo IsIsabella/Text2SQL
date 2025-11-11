@@ -1,6 +1,7 @@
 package org.texttosql;
 
 import com.google.gson.Gson;
+import net.jcip.annotations.NotThreadSafe;
 import org.texttosql.common.QueryRequest;
 import org.texttosql.common.ResultsResponse;
 import org.texttosql.common.SqlResponse;
@@ -18,6 +19,7 @@ import java.util.Map;
 /**
  * Класс для создания и отправки запросов на естественном языке и отображения SQL
  */
+@NotThreadSafe
 public class CreateQuery extends JFrame {
     /**
      * Текстовое поле для ввода запроса на естественном языке
@@ -306,7 +308,6 @@ public class CreateQuery extends JFrame {
                                 }
                                 CreateQuery.this.showSQLClicked = false;
                             }
-                            CreateQuery.this.naturalLanguageArea.setText("");
                             CreateQuery.this.statusLabel.setText("Готово");
                         } else {
                             JOptionPane.showMessageDialog(null,

@@ -1,8 +1,11 @@
 package org.texttosql.common;
 
+import net.jcip.annotations.NotThreadSafe;
+
 /**
  * Класс для передачи данных аутентификации от клиента к серверу
  */
+@NotThreadSafe
 public class LoginRequest {
     /**
      * Имя пользователя

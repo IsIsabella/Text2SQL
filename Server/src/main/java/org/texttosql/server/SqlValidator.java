@@ -1,5 +1,7 @@
 package org.texttosql.server;
 
+import com.google.errorprone.annotations.Immutable;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -12,6 +14,7 @@ import java.util.regex.Pattern;
  * запрещает любые операции, создающие или изменяющие объекты (DDL, DML кроме SELECT),
  * доступ к системным схемам/таблицам и множественные statements
  */
+@Immutable
 public class SqlValidator {
     /**
      * Список запрещенных ключевых слов (операций)
@@ -99,12 +102,58 @@ public class SqlValidator {
      * @return нормализованный SQL
      */
     private String normalizeSql(String sql) {
-        // Удаление однострочных комментариев
-        sql = sql.replaceAll("--[^\n]*", "");
-        // Удаление многострочных комментариев
-        sql = sql.replaceAll("/\\*.*?\\*/", "");
-        // Удаление лишних пробелов и приведение к нижнему регистру
-        return sql.toLowerCase().replaceAll("\\s+", " ");
+        StringBuilder result = new StringBuilder();
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        boolean escaped = false;
+
+        for (int i = 0; i < sql.length(); i++) {
+            char c = sql.charAt(i);
+
+            if (escaped) {
+                result.append(c);
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escaped = true;
+                result.append(c);
+                continue;
+            }
+
+            if (c == '\'' && !inDoubleQuote) {
+                inSingleQuote = !inSingleQuote;
+                result.append(c);
+                continue;
+            }
+
+            if (c == '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+                result.append(c);
+                continue;
+            }
+
+            // Если внутри кавычек — оставляем как есть
+            if (inSingleQuote || inDoubleQuote) {
+                result.append(c);
+                continue;
+            }
+
+            // Вне кавычек — приводим к нижнему регистру
+            result.append(Character.toLowerCase(c));
+        }
+
+        String normalized = result.toString();
+
+        // Удаляем комментарии (вне кавычек)
+        normalized = normalized.replaceAll("--[^\\n]*", "");
+        normalized = normalized.replaceAll("/\\*.*?\\*/", "");
+
+        // Сжимаем пробелы (вне кавычек)
+        normalized = normalized.replaceAll("\\s+", " ");
+
+        return normalized.trim();
     }
 
     /**

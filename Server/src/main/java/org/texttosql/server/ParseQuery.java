@@ -1,6 +1,7 @@
 package org.texttosql.server;
 
 import com.google.gson.Gson;
+import net.jcip.annotations.NotThreadSafe;
 import org.texttosql.common.Configuration;
 import org.texttosql.common.RoleConfiguration;
 
@@ -12,178 +13,185 @@ import java.util.regex.Pattern;
 /**
  * Класс для парсинга SQL-запросов с учетом шифрования/расшифровки колонок на основе ролей
  */
+@NotThreadSafe
 public class ParseQuery {
     /**
-     * SQL-запрос для обработки, приведённый к нижнему регистру.
+     * SQL-запрос
      */
-    private String sql;
-
+    private final String sql;
     /**
-     * Хост базы данных (например, "localhost").
+     * Имя пользователя базы данных
      */
-    private String host;
-
+    private final String username;
     /**
-     * Имя пользователя для подключения к базе данных.
+     * Конфигурация ролей
      */
-    private String username;
+    private final Map<String, RoleConfiguration> roleConfigurations;
 
-    /**
-     * Пароль пользователя для подключения к базе данных.
-     */
-    private String password;
-
-    /**
-     * Имя базы данных (например, "bookstore").
-     */
-    private String databaseName;
-
-    /**
-     * Карта конфигураций ролей, где ключ — имя роли, значение — конфигурация роли.
-     */
-    private Map<String, RoleConfiguration> roleConfigurations;
-
-    /**
-     * Создаёт экземпляр {@code ParseQuery} с указанным SQL-запросом и параметрами подключения к базе данных.
-     * <p>
-     * Инициализирует SQL-запрос (приводит к нижнему регистру) и загружает конфигурацию ролей из JSON-файла.
-     * </p>
-     *
-     * @param sql           SQL-запрос для обработки
-     * @param host          хост базы данных
-     * @param username      имя пользователя для подключения к базе
-     * @param password      пароль пользователя
-     * @param databaseName  имя базы данных
-     * @param configFilePath путь к JSON-файлу конфигурации ролей
-     * @throws RuntimeException если файл конфигурации не удалось загрузить или разобрать
-     */
-    public ParseQuery(String sql, String host, String username, String password,
-                      String databaseName, String configFilePath) {
-        this.sql = sql.toLowerCase();
-        this.host = host;
+    public ParseQuery(String sql, String username, String configPath) {
+        this.sql = sql;
         this.username = username;
-        this.password = password;
-        this.databaseName = databaseName;
-        this.roleConfigurations = this.loadRoleConfigurations(configFilePath);
+        this.roleConfigurations = this.loadRoleConfigurations(configPath);
     }
 
     /**
-     * Загружает конфигурацию ролей из JSON-файла
+     * Загрузка конфигурации
      *
-     * @param configFilePath путь к JSON-файлу конфигурации
-     * @return карта конфигураций ролей, где ключ — имя роли, значение — объект RoleConfiguration
-     * @throws RuntimeException если файл не удалось прочитать или JSON некорректен
+     * @param configPath конфигурационный файл
+     * @return конфигурация ролей
+     * @throws RuntimeException при ошибке загрузки конфигурации
      */
-    private Map<String, RoleConfiguration> loadRoleConfigurations(String configFilePath) {
-        try (FileReader reader = new FileReader(configFilePath)) {
+    private Map<String, RoleConfiguration> loadRoleConfigurations(String configPath) {
+        try (FileReader reader = new FileReader(configPath)) {
             Gson gson = new Gson();
             Configuration config = gson.fromJson(reader, Configuration.class);
             Map<String, RoleConfiguration> map = new HashMap<>();
+
             for (RoleConfiguration role : config.roles) {
-                String normalizedRoleName = role.roleName.toLowerCase();
-                RoleConfiguration normalizedRole = new RoleConfiguration();
-                normalizedRole.roleName = normalizedRoleName;
-                normalizedRole.encryptedColumns = role.encryptedColumns != null ?
-                        Arrays.stream(role.encryptedColumns)
-                                .map(String::toLowerCase)
-                                .toArray(String[]::new) : null;
-                normalizedRole.tableMappings = role.tableMappings != null ?
-                        role.tableMappings.entrySet().stream()
-                                .collect(HashMap::new,
-                                        (m, e) ->
-                                                m.put(e.getKey().toLowerCase(), e.getValue().toLowerCase()),
-                                        HashMap::putAll) : null;
-                map.put(normalizedRoleName, normalizedRole);
+                String name = role.roleName.toLowerCase();
+                RoleConfiguration norm = new RoleConfiguration();
+                norm.roleName = name;
+                norm.encryptedColumns = role.encryptedColumns != null
+                        ? Arrays.stream(role.encryptedColumns).map(String::toLowerCase).toArray(String[]::new)
+                        : new String[0];
+                norm.tableMappings = role.tableMappings != null
+                        ? new HashMap<>(role.tableMappings) : new HashMap<>();
+                norm.tableMappings.replaceAll((k, v) -> v.toLowerCase());
+                map.put(name, norm);
             }
             return map;
-        } catch (Exception ex) {
-            throw new RuntimeException("Ошибка загрузки конфигурации: " + ex.getMessage(), ex);
+        } catch (Exception e) {
+            throw new RuntimeException("Не удалось загрузить конфигурацию ролей: " + e.getMessage());
         }
     }
 
     /**
-     * Обрабатывает SQL-запрос, заменяя зашифрованные колонки в зависимости от роли пользователя
+     * Преобразование SQL-запросов
      *
-     * @return обработанный SQL-запрос с заменёнными зашифрованными колонками
-     * @throws Exception если произошла ошибка при проверке роли или обработке SQL
+     * @return SQL-запрос с преобразованием колонок, содержащих шифрование
+     * @throws RuntimeException при ошибке загрузки конфигурации
      */
-    public String parseSql() throws Exception {
-        ConnectWithDb connect = new ConnectWithDb(this.host, this.username, this.password, this.databaseName);
-        for (Map.Entry<String, RoleConfiguration> entry : roleConfigurations.entrySet()) {
-            if (connect.currentRole(entry.getKey())) {
-                return replacingColumn(entry.getValue());
-            }
-        }
-        return this.sql;
-    }
+    public String parseSql() {
+        String roleName = switch (this.username) {
+            case "admin" -> "admin_role";
+            case "seller" -> "seller_role";
+            case "buyer" -> "buyer_role";
+            default -> throw new RuntimeException("Неизвестный пользователь: " + this.username);
+        };
 
-    /**
-     * Заменяет зашифрованные колонки на вызовы функции gost_kuz_decrypt, исключая алиасы после AS
-     *
-     * @param roleConfig конфигурация роли пользователя
-     * @return обработанный SQL-запрос
-     */
-    private String replacingColumn(RoleConfiguration roleConfig) {
-        if (roleConfig.encryptedColumns == null || roleConfig.encryptedColumns.length == 0) {
+        RoleConfiguration config = this.roleConfigurations.get(roleName);
+        if (config == null || config.encryptedColumns.length == 0) {
             return this.sql;
         }
 
-        Set<String> processedColumns = new HashSet<>();
+        return this.replacingColumn(config);
+    }
 
-        // Поиск выражений вида: alias.column [AS aliasName]
-        // или column [AS aliasName]
-        String columnPattern = "\\b(\\w+\\.)?(" + String.join("|", roleConfig.encryptedColumns) + ")\\b(\\s+AS\\s+(\\w+))?";
-        Pattern pattern = Pattern.compile(columnPattern, Pattern.CASE_INSENSITIVE);
+    /**
+     * Применяет к зашифрованным колонкам gost_kuz_decrypt()
+     *
+     * @param config конфигурация роли (содержит зашифрованные колонки)
+     * @return SQL-запрос с преобразованием колонок, содержащих шифрование
+     */
+    private String replacingColumn(RoleConfiguration config) {
+        Set<String> processed = new HashSet<>();
+        String columnList = String.join("|", config.encryptedColumns);
+
+        // Паттерн не заходит внутрь '...' и "..."
+        String patternStr = "(?i)\\b(\\w+\\.)?(" + columnList + ")\\b(?=\\s|[,;)$]|\\s+AS\\b)";
+        Pattern pattern = Pattern.compile(patternStr);
+
+        // Разбиваем SQL на токены, исключая кавычки
         Matcher matcher = pattern.matcher(this.sql);
-        StringBuffer sb = new StringBuffer();
+        StringBuffer result = new StringBuffer();
+        int lastEnd = 0;
 
         while (matcher.find()) {
-            String alias = matcher.group(1);
-            String columnName = matcher.group(2);
-            String asClause = matcher.group(3);
-            String aliasName = matcher.group(4);
+            int start = matcher.start();
+            int end = matcher.end();
 
-            String fullColumn = alias != null ? alias + columnName : columnName;
-
-            // Если уже обработали — пропускаем
-            if (processedColumns.contains(fullColumn)) {
-                matcher.appendReplacement(sb, Matcher.quoteReplacement(matcher.group(0)));
+            // Проверяем не внутри ли мы кавычек
+            if (this.isInsideQuotes(this.sql, start)) {
+                // Пропускаем — это строка, а не колонка
+                result.append(this.sql, lastEnd, end);
+                lastEnd = end;
                 continue;
             }
 
-            // Проверяем соответствие колонки таблице
-            String tableName = getTableNameForColumn(columnName, roleConfig.tableMappings);
+            String alias = matcher.group(1); // b.
+            String column = matcher.group(2).toLowerCase();
+            String fullColumn = (alias != null ? alias : "") + column;
 
-            // Формируем выражение
-            String replacement = String.format(
-                    "gost_kuz_decrypt(%s, (select get_data_key('%s', '%s', '%s')))",
-                    fullColumn, tableName, columnName, roleConfig.roleName
-            );
-
-            // Если после AS идёт то же имя, что и колонка — сохраняем AS <columnName>
-            if (aliasName != null && aliasName.equalsIgnoreCase(columnName)) {
-                replacement = String.format("%s AS %s", replacement, aliasName);
+            if (processed.contains(fullColumn)) {
+                result.append(this.sql, lastEnd, end);
+                lastEnd = end;
+                continue;
             }
 
-            matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
-            processedColumns.add(fullColumn);
+            String table = this.getTableNameForColumn(column, config.tableMappings);
+            String tableRef = alias != null ? alias.substring(0, alias.length() - 1) : table;
+
+            // Формируем вызов
+            String decryptCall = String.format(
+                    "gost_kuz_decrypt(\"%s\".\"%s\", (SELECT get_data_key('%s', '%s', '%s')))",
+                    tableRef, column, table, column, config.roleName
+            );
+
+            // Сохраняем AS, если есть
+            String after = this.sql.substring(end);
+            if (after.matches("(?i)^\\s+AS\\s+\\w+.*")) {
+                int asEnd = after.indexOf(' ', after.toLowerCase().indexOf(" as ") + 4);
+                if (asEnd == -1) asEnd = after.length();
+                String asClause = after.substring(0, asEnd);
+                decryptCall += asClause;
+                end += asEnd;
+            }
+
+            result.append(this.sql, lastEnd, start);
+            result.append(decryptCall);
+            lastEnd = end;
+            processed.add(fullColumn);
         }
 
-        matcher.appendTail(sb);
-        return sb.toString();
+        result.append(this.sql.substring(lastEnd));
+        return result.toString();
     }
+
     /**
-     * Получает имя таблицы, связанное с колонкой, из карты соответствий таблицы
+     * Проверяет, находится ли позиция внутри одинарных или двойных кавычек
      *
-     * @param columnName   имя колонки
-     * @param tableMappings карта соответствий колонок и таблиц
-     * @return имя таблицы, связанное с колонкой
-     * @throws IllegalArgumentException если соответствие для колонки не найдено
+     * @param sql SQL-запрос
+     * @param pos проверяемая позиция
+     * @return находится ли позиция внутри одинарных или двойных кавычек
      */
-    private String getTableNameForColumn(String columnName, Map<String, String> tableMappings) {
-        if (tableMappings == null || !tableMappings.containsKey(columnName)) {
-            throw new IllegalArgumentException("Соответствие не найдено для столбца: " + columnName);
+    private boolean isInsideQuotes(String sql, int pos) {
+        boolean inSingle = false;
+        boolean inDouble = false;
+
+        for (int i = 0; i < pos; i++) {
+            char c = sql.charAt(i);
+            if (c == '\'' && !inDouble) {
+                inSingle = !inSingle;
+            } else if (c == '"' && !inSingle) {
+                inDouble = !inDouble;
+            }
         }
-        return tableMappings.get(columnName);
+        return inSingle || inDouble;
+    }
+
+    /**
+     * Получаем название таблицы, в которой находится колонка
+     *
+     * @param column колонка
+     * @param mappings сопоставление колонок и таблиц
+     * @return название таблицы
+     * @throws RuntimeException если таблица не найдена
+     */
+    private String getTableNameForColumn(String column, Map<String, String> mappings) {
+        String table = mappings.get(column);
+        if (table == null) {
+            throw new RuntimeException("Нет таблицы для колонки: " + column);
+        }
+        return table;
     }
 }

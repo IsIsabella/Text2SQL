@@ -1,10 +1,13 @@
 package org.texttosql.common;
 
+import net.jcip.annotations.NotThreadSafe;
+
 import java.util.Map;
 
 /**
- * Класс для передачи данных запроса на естественном языке и выбранных таблиц.
+ * Класс для передачи данных запроса на естественном языке и выбранных таблиц
  */
+@NotThreadSafe
 public class QueryRequest {
     /**
      * Запрос на естественном языке

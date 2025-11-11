@@ -1,6 +1,7 @@
 package org.texttosql;
 
 import com.google.gson.Gson;
+import net.jcip.annotations.NotThreadSafe;
 import org.texttosql.common.LoginRequest;
 
 import javax.swing.*;
@@ -15,6 +16,7 @@ import java.util.Map;
 /**
  * Главный класс клиентского приложения, реализующий интерфейс входа в систему
  */
+@NotThreadSafe
 public class Main extends JFrame {
     /**
      * Поле для ввода логина

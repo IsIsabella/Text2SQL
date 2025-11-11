@@ -1,6 +1,8 @@
 package org.texttosql.server;
 
+import com.google.errorprone.annotations.ThreadSafe;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,10 +11,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Класс для взаимодействия с Python-скриптом, генерирующим SQL-запросы
+ * Связь с локальным Ollama для генерации SQL
  */
+@ThreadSafe
 public class ConnectToDeepSeek {
     /**
      * Логирования событий и ошибок
@@ -21,7 +25,7 @@ public class ConnectToDeepSeek {
     /**
      * Взаимодействия с локальным сервером ollama для генерации SQL
      */
-    private static final String OLLAMA_API_URL = "http://localhost:11434/api/chat";
+    private static final String OLLAMA_URL = "http://localhost:11434/api/chat";
     /**
      * Сериализации/десериализации JSON
      */
@@ -30,124 +34,173 @@ public class ConnectToDeepSeek {
      * Отправки HTTP-запросов к API ollama
      */
     private static final HttpClient client = HttpClient.newHttpClient();
-
+    /**
+     * Кэш system-сообщения для модели
+     */
+    private static final ConcurrentHashMap<String, JsonObject> SYSTEM_MESSAGE_CACHE = new ConcurrentHashMap<>();
+    /**
+     * Имя модели
+     */
+    private static final String MODEL_NAME = "hf.co/eliza555beth2002/DeepSeek-R1-Distill-Text2SQL-OneEpoch-GGUF-q4:Q4_K_M";
     /**
      * Полная схема базы данных
      */
     private static final String SCHEMA = """
             create table Authors(
-                AuthorID integer not null primary key check(AuthorID>0),
-                AuthorFIO varchar(40) not null
+            AuthorID integer not null primary key check(AuthorID>0),
+            AuthorFIO varchar(40) not null
             );
             create table Books(
-                Cipher integer not null primary key check(Cipher>0),
-                BookName varchar(4000) not null,
-                BookTheme varchar(30) not null
-                check(BookTheme in('Любовь','Дружба','Смерть','Общественные проблемы','Внутренние противоречия')),
-                BookGenre varchar(15) not null
-                check(BookGenre in('Роман','Поэма','Рассказ','Пьеса','Эпопея','Драма'))
+            Cipher integer not null primary key check(Cipher>0),
+            BookName varchar(4000) not null,
+            BookTheme varchar(30) not null
+            check(BookTheme in('Любовь','Дружба','Смерть','Общественные проблемы','Внутренние противоречия')),
+            BookGenre varchar(15) not null
+            check(BookGenre in('Роман','Поэма','Рассказ','Пьеса','Эпопея','Драма'))
             );
             create table PublishingHouse(
-                PublishingHouseID integer not null primary key
-                check(PublishingHouseID>0),
-                PublishingHouseName varchar(1000) not null,
-                TradeMargin decimal(5,4) default'0' not null check (TradeMargin>0 and TradeMargin<=100)
+            PublishingHouseID integer not null primary key
+            check(PublishingHouseID>0),
+            PublishingHouseName varchar(1000) not null,
+            TradeMargin decimal(5,4) default'0' not null check (TradeMargin>0 and TradeMargin<=100)
             );
-            create table Circulation(
-                CirculationID integer not null primary key check(CirculationID>0),
-                DeliveryDate date not null,
-                PurchasePrice decimal(18,4) default'1000.0000' not null check(PurchasePrice>0),
-                NumReceivedCopies integer not null check(NumReceivedCopies>=0),
-                NumUnsoldCopies integer not null check(NumUnsoldCopies>=0),
-                BookCipher integer not null check(BookCipher>0),
-                IDPublishingHouse int not null check(IDPublishingHouse>0),
-                foreign key(BookCipher) references Books(Cipher) on update cascade,
-                foreign key(IDPublishingHouse) references PublishingHouse(PublishingHouseID) on update cascade,
-                check(NumReceivedCopies>NumUnsoldCopies)
+            CREATE TABLE Circulation (
+                CirculationID INTEGER NOT NULL PRIMARY KEY CHECK (CirculationID > 0),
+                DeliveryDate DATE NOT NULL,
+                PurchasePrice DECIMAL(18,4) DEFAULT 1000.0000 NOT NULL CHECK (PurchasePrice > 0),
+                NumReceivedCopies INTEGER NOT NULL CHECK (NumReceivedCopies >= 0),
+                NumUnsoldCopies INTEGER NOT NULL CHECK (NumUnsoldCopies >= 0),
+                BookCipher INTEGER NOT NULL CHECK (BookCipher > 0),
+                IDPublishingHouse INTEGER NOT NULL CHECK (IDPublishingHouse > 0),
+                FOREIGN KEY (BookCipher) REFERENCES Books(Cipher) ON UPDATE CASCADE,
+                FOREIGN KEY (IDPublishingHouse) REFERENCES PublishingHouse(PublishingHouseID) ON UPDATE CASCADE,
+                CHECK (NumReceivedCopies > NumUnsoldCopies)
             );
-            create table Cheque(
-                ChequeID integer not null primary key
-                check(ChequeID>0),
-                PurchaseDate date not null,
-                CashierFIO varchar(40) not null
+            CREATE TABLE Cheque (
+                ChequeID INTEGER NOT NULL PRIMARY KEY CHECK (ChequeID > 0),
+                PurchaseDate DATE NOT NULL,
+                CashierFIO TEXT NOT NULL
             );
-            create table Wrote(
-                IDAuthor integer not null check(IDAuthor>0),
-                BookCipher integer not null check(BookCipher>0),
-                foreign key(IDAuthor) references Authors(AuthorID) on update cascade,
-                foreign key(BookCipher) references Books(Cipher) on update cascade,
-                primary key(IDAuthor,BookCipher)
+            CREATE TABLE Wrote (
+                IDAuthor INTEGER NOT NULL CHECK (IDAuthor > 0),
+                BookCipher INTEGER NOT NULL CHECK (BookCipher > 0),
+                FOREIGN KEY (IDAuthor) REFERENCES Authors(AuthorID) ON UPDATE CASCADE,
+                FOREIGN KEY (BookCipher) REFERENCES Books(Cipher) ON UPDATE CASCADE,
+                PRIMARY KEY (IDAuthor, BookCipher)
             );
-            create table Contains(
-                IDCheque int not null check(IDCheque>0),
-                IDCirculation int not null check(IDCirculation>0),
-                BooksQuantity int not null check(BooksQuantity>0),
-                foreign key(IDCheque) references Cheque(ChequeID) on update cascade,
-                foreign key(IDCirculation) references Circulation(CirculationID) on update cascade,
-                primary key(IDCheque,IDCirculation)
+            CREATE TABLE Contains (
+                IDCheque INTEGER NOT NULL CHECK (IDCheque > 0),
+                IDCirculation INTEGER NOT NULL CHECK (IDCirculation > 0),
+                BooksQuantity INTEGER NOT NULL CHECK (BooksQuantity > 0),
+                FOREIGN KEY (IDCheque) REFERENCES Cheque(ChequeID) ON UPDATE CASCADE,
+                FOREIGN KEY (IDCirculation) REFERENCES Circulation(CirculationID) ON UPDATE CASCADE,
+                PRIMARY KEY (IDCheque, IDCirculation)
             );
             """;
+
+
+    /**
+     * Создаём system-сообщение один раз
+     *
+     * @return system-сообщение
+     */
+    private static JsonObject getSystemMessage() {
+        return ConnectToDeepSeek.SYSTEM_MESSAGE_CACHE.computeIfAbsent(ConnectToDeepSeek.MODEL_NAME, model -> {
+            JsonObject system = new JsonObject();
+            system.addProperty("role", "system");
+            system.addProperty("content",
+                    "Ты — модель Text-to-SQL. Используй следующую схему базы данных:\n\n" +
+                            ConnectToDeepSeek.SCHEMA + "\n\n" +
+                            "Связи таблиц в БД:\n" +
+                            "Authors (Автор) — содержит сведения об авторах.\n" +
+                            "Связана с Books через таблицу Wrote (многие-ко-многим).\n" +
+                            "Books (Книги) — хранит данные о книгах.\n" +
+                            "Связана с Authors через Wrote и с Circulation (один-ко-многим: одна книга может иметь несколько тиражей).\n" +
+                            "PublishingHouse (Издательство) — содержит данные об издательствах.\n" +
+                            "Связана с Circulation (один-ко-многим: одно издательство выпускает много тиражей).\n" +
+                            "Circulation (Тираж) — связывает книги и издательства, хранит информацию о поставках.\n" +
+                            "Связана с Contains (один-ко-многим: один тираж может быть продан в нескольких чеках).\n" +
+                            "Cheque (Чек) — отражает продажи книг.\n" +
+                            "Связана с Contains (один чек может содержать несколько тиражей книг).\n" +
+                            "Wrote (Авторство) — таблица связи «многие-ко-многим» между Authors и Books.\n" +
+                            "Contains (Содержимое чека) — таблица связи «многие-ко-многим» между Cheque и Circulation." +
+                            "Будь внимательна к названиям колонок и ограничениям. Не добавляй лишнюю информацию в запрос," +
+                            "выводи строго то, что требуется. Это важно, потому что этот запрос сразу же выполняется в БД, и " +
+                            "некорректная формулировка или лишняя информация могут привести к " +
+                            "необратимым последствиям.\""
+            );
+            return system;
+        });
+    }
 
     /**
      * Генерирует SQL-запрос из текста на естественном языке, используя API ollama
      *
-     * @param question текст запроса на естественном языке
-     * @return сгенерированный SQL-запрос
-     * @throws RuntimeException если произошла ошибка при отправке запроса или разборе ответа
+     * @param question запрос на естественном языке
+     * @return SQL-запрос
+     * @throws Exception если произошла ошибка при генерации
      */
     public String generateSql(String question) {
         try {
-            logger.info("Starting SQL generation for question: {}", question);
-            long startTime = System.currentTimeMillis();
+            ConnectToDeepSeek.logger.info("Генерация SQL для: {}", question);
 
-            // Формируем JSON-запрос для ollama с полной схемой
-            JsonObject requestBody = new JsonObject();
-            requestBody.addProperty("model",
-                    "hf.co/eliza555beth2002/DeepSeek-R1-Distill-Text2SQL-OneEpoch-GGUF-q4:Q4_K_M");
-            JsonObject message = new JsonObject();
-            message.addProperty("role", "user");
-            message.addProperty("content", "Prompt: \"" + question + "\"\nContext: " +
-                    ConnectToDeepSeek.SCHEMA);
-            requestBody.add("messages", ConnectToDeepSeek.gson.toJsonTree(new JsonObject[]{message}));
-            requestBody.addProperty("stream", false);
+            JsonObject requestBody = ConnectToDeepSeek.getJsonObject(question);
 
-            // Отправляем POST-запрос
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(ConnectToDeepSeek.OLLAMA_API_URL))
+                    .uri(URI.create(ConnectToDeepSeek.OLLAMA_URL))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(ConnectToDeepSeek.gson.toJson(requestBody)))
+                    .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
                     .build();
 
-            HttpResponse<String> response = ConnectToDeepSeek.client.send(request, HttpResponse.BodyHandlers.ofString());
-            String responseBody = response.body();
+            HttpResponse<String> response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).join();
+            JsonObject json = ConnectToDeepSeek.gson.fromJson(response.body(), JsonObject.class);
 
-            // Парсим ответ
-            JsonObject responseJson = ConnectToDeepSeek.gson.fromJson(responseBody, JsonObject.class);
-            String responseText = responseJson.get("message").getAsJsonObject().get("content").getAsString();
+            String content = json.getAsJsonObject("message").get("content").getAsString();
+            String sql = extractSql(content);
 
-            // Извлекаем SQL
-            String sqlQuery = extractSqlQuery(responseText);
-            ConnectToDeepSeek.logger.info("SQL generation took {} ms", System.currentTimeMillis() - startTime);
-            return sqlQuery != null ? sqlQuery : "No SQL query found.";
+            return sql != null ? sql : "SQL не найден в ответе модели.";
+
         } catch (Exception e) {
-            ConnectToDeepSeek.logger.error("Error generating SQL: {}", e.getMessage(), e);
-            return "Error: " + e.getMessage();
+            ConnectToDeepSeek.logger.error("Ошибка генерации SQL", e);
+            return "Ошибка: " + e.getMessage();
         }
     }
 
     /**
-     * Возвращает схему базы данных для включения в запрос к ollama
+     * Создает тело запроса
      *
-     * @return строка с SQL-определением схемы базы данных
+     * @param question запрос на естественном языке
+     * @return тело запроса
      */
-    private String extractSqlQuery(String responseText) {
+    private static JsonObject getJsonObject(String question) {
+        JsonObject systemMessage = ConnectToDeepSeek.getSystemMessage();
+        JsonObject userMessage = new JsonObject();
+        userMessage.addProperty("role", "user");
+        userMessage.addProperty("content", question);
+
+        JsonArray messages = new JsonArray();
+        messages.add(systemMessage);
+        messages.add(userMessage);
+
+        JsonObject requestBody = new JsonObject();
+        requestBody.addProperty("model", ConnectToDeepSeek.MODEL_NAME);
+        requestBody.add("messages", messages);
+        requestBody.addProperty("stream", false);
+        return requestBody;
+    }
+
+    /**
+     * Извлекает SQL-запрос
+     *
+     * @param text ответ модели
+     * @return SQL-запрос
+     */
+    private String extractSql(String text) {
         try {
-            int startIdx = responseText.indexOf("```sql");
-            int endIdx = responseText.lastIndexOf("```");
-            if (startIdx == -1 || endIdx == -1) {
-                return null;
-            }
-            return responseText.substring(startIdx + 6, endIdx).trim();
+            int start = text.indexOf("```sql");
+            int end = text.lastIndexOf("```");
+            if (start == -1 || end == -1) return null;
+            return text.substring(start + 6, end).trim();
         } catch (Exception e) {
             return null;
         }
