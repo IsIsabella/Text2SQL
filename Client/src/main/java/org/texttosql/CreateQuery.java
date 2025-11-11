@@ -24,15 +24,15 @@ public class CreateQuery extends JFrame {
     /**
      * Текстовое поле для ввода запроса на естественном языке
      */
-    private JTextArea naturalLanguageArea;
+    private final JTextArea naturalLanguageArea;
     /**
      * Текстовое поле для отображения SQL-запроса
      */
-    private JTextArea sqlArea;
+    private final JTextArea sqlArea;
     /**
      * Маппинг выбранных таблиц (имя таблицы -> выбрана ли)
      */
-    private Map<String, Boolean> tableSelected = new HashMap<>();
+    private final Map<String, Boolean> tableSelected = new HashMap<>();
     /**
      * Флаг, указывающий, была ли нажата кнопка генерации SQL
      */
@@ -40,17 +40,15 @@ public class CreateQuery extends JFrame {
     /**
      * Метка для отображения статуса операции
      */
-    private JLabel statusLabel = new JLabel("Готово", SwingConstants.CENTER);
+    private final JLabel statusLabel = new JLabel("Готово", SwingConstants.CENTER);
 
     /**
      * Конструктор окна создания запросов
      *
-     * @param host         хост базы данных
-     * @param username     имя пользователя
-     * @param password     пароль пользователя
-     * @param databaseName название базы данных
+     * @param username имя пользователя
+     * @param password пароль пользователя
      */
-    public CreateQuery(String host, String username, String password, String databaseName) {
+    public CreateQuery(String username, String password) {
         setTitle("Книжный магазин");
         try {
             ImageIcon icon = new ImageIcon("Client/src/main/resources/IconBookStore.png");

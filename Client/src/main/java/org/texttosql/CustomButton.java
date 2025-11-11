@@ -15,15 +15,15 @@ public class CustomButton extends JButton {
     /**
      * Цвет кнопки по умолчанию
      */
-    private Color defaultColor = new Color(0, 120, 215);
+    private final Color defaultColor = new Color(0, 120, 215);
     /**
      * Цвет кнопки при наведении
      */
-    private Color hoverColor = new Color(0, 100, 185);
+    private final Color hoverColor = new Color(0, 100, 185);
     /**
      * Цвет кнопки при нажатии
      */
-    private Color pressedColor = new Color(0, 80, 150);
+    private final Color pressedColor = new Color(0, 80, 150);
     /**
      * Флаг, указывающий, находится ли курсор над кнопкой
      */

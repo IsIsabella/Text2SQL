@@ -103,7 +103,7 @@ public class ParseQuery {
 
         // Разбиваем SQL на токены, исключая кавычки
         Matcher matcher = pattern.matcher(this.sql);
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
         int lastEnd = 0;
 
         while (matcher.find()) {

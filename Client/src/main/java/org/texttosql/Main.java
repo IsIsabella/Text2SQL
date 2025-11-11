@@ -21,19 +21,15 @@ public class Main extends JFrame {
     /**
      * Поле для ввода логина
      */
-    private JTextField loginTextField;
+    private final JTextField loginTextField;
     /**
      * Поле для ввода пароля
      */
-    private JPasswordField passwordField;
-    /**
-     * Кнопка для входа в систему
-     */
-    private CustomButton logInButton;
+    private final JPasswordField passwordField;
     /**
      * Флажок для запоминания логина
      */
-    private JCheckBox rememberMeCheckBox;
+    private final JCheckBox rememberMeCheckBox;
     /**
      * Имя файла для сохранения логина
      */
@@ -113,17 +109,20 @@ public class Main extends JFrame {
         formGbc.gridwidth = 2;
         loginForm.add(this.rememberMeCheckBox, formGbc);
 
-        this.logInButton = new CustomButton("Вход");
-        this.logInButton.setBackground(new Color(0, 168, 239));
-        this.logInButton.setForeground(Color.WHITE);
-        this.logInButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        /**
+         * Кнопка для входа в систему
+         */
+        CustomButton logInButton = new CustomButton("Вход");
+        logInButton.setBackground(new Color(0, 168, 239));
+        logInButton.setForeground(Color.WHITE);
+        logInButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         formGbc.gridx = 0;
         formGbc.gridy = 4;
         formGbc.gridwidth = 2;
         formGbc.anchor = GridBagConstraints.CENTER;
-        loginForm.add(this.logInButton, formGbc);
+        loginForm.add(logInButton, formGbc);
 
-        this.logInButton.addActionListener(e -> {
+        logInButton.addActionListener(e -> {
             String username = this.loginTextField.getText();
             String password = new String(this.passwordField.getPassword());
             SwingWorker<Map<String, Object>, Void> worker = new SwingWorker<>() {
@@ -146,7 +145,7 @@ public class Main extends JFrame {
                     try {
                         Map<String, Object> response = get();
                         if (Boolean.TRUE.equals(response.get("success"))) {
-                            new CreateQuery("localhost", (String) response.get("username"), password, "bookstore").setVisible(true);
+                            new CreateQuery((String) response.get("username"), password).setVisible(true);
                             dispose();
                         } else {
                             JOptionPane.showMessageDialog(null, response.get("message"), "Ошибка", JOptionPane.ERROR_MESSAGE);
