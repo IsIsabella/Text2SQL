@@ -1,30 +1,35 @@
 {
   "roles": [
     {
-      "roleName": "adminsrole",
-      "encryptedColumns": ["authorfio", "bookname", "publishinghousename", "cashierfio"],
+      "roleName": "admin_role",
+      "encryptedColumns": ["first_name", "last_name", "middle_name", "password_hash", "cashierfio"],
       "tableMappings": {
-        "authorfio": "authors",
-        "bookname": "books",
-        "publishinghousename": "publishinghouse",
+        "first_name": "users",
+        "last_name": "users",
+        "middle_name": "users",
+        "password_hash": "users",
         "cashierfio": "cheque"
       }
     },
     {
-      "roleName": "staffrole",
-      "encryptedColumns": ["authorfio", "bookname", "publishinghousename"],
+      "roleName": "seller_role",
+      "encryptedColumns": ["first_name", "last_name", "middle_name", "password_hash", "cashierfio"],
       "tableMappings": {
-        "authorfio": "authors",
-        "bookname": "books",
-        "publishinghousename": "publishinghouse"
+        "first_name": "users",
+        "last_name": "users",
+        "middle_name": "users",
+        "password_hash": "users",
+        "cashierfio": "cheque"
       }
     },
     {
-      "roleName": "usersrole",
-      "encryptedColumns": ["authorfio", "bookname"],
+      "roleName": "buyer_role",
+      "encryptedColumns": ["first_name", "last_name", "middle_name", "password_hash"],
       "tableMappings": {
-        "authorfio": "authors",
-        "bookname": "books"
+        "first_name": "users",
+        "last_name": "users",
+        "middle_name": "users",
+        "password_hash": "users"
       }
     }
   ]

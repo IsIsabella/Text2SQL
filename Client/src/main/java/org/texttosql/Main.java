@@ -145,13 +145,28 @@ public class Main extends JFrame {
                     try {
                         Map<String, Object> response = get();
                         if (Boolean.TRUE.equals(response.get("success"))) {
+                            String role = (String) response.get("role");
+
+                            // Проверка предупреждения
+                            Boolean downgraded = (Boolean) response.get("downgraded");
+                            String warning = (String) response.get("warning");
+                            if (Boolean.TRUE.equals(downgraded) && warning != null && !warning.trim().isEmpty()) {
+                                JOptionPane.showMessageDialog(
+                                        Main.this,
+                                        warning,
+                                        "Предупреждение безопасности",
+                                        JOptionPane.WARNING_MESSAGE
+                                );
+                            }
                             new CreateQuery((String) response.get("username"), password).setVisible(true);
                             dispose();
                         } else {
-                            JOptionPane.showMessageDialog(null, response.get("message"), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(null, response.get("message"),
+                                    "Ошибка", JOptionPane.ERROR_MESSAGE);
                         }
                     } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(null, "Ошибка: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(null, "Ошибка: " + ex.getMessage(),
+                                "Ошибка", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             };

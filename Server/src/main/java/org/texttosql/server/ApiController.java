@@ -47,24 +47,30 @@ public class ApiController {
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
         Map<String, Object> response = new HashMap<>();
         try {
-            // Подключаемся к БД для проверки пользователя
             ConnectWithDb authDb = new ConnectWithDb("localhost", request.getUsername(),
                     request.getPassword(), "bookstore_secure");
 
             ConnectWithDb.DbUserInfo userInfo = authDb.authenticateUser();
 
             if (userInfo == null) {
-                throw new RuntimeException("Неверный логин или пароль");
+                response.put("success", false);
+                response.put("message", "Неверный логин или пароль");
+                return ResponseEntity.badRequest().body(response);
             }
 
-            // Успешный вход
             response.put("success", true);
             response.put("username", userInfo.clientUsername());
             response.put("role", userInfo.role());
+
+            // Добавляем флаг и сообщение
+            if (userInfo.downgraded()) {
+                response.put("downgraded", true);
+                response.put("warning", userInfo.warningMessage());
+            }
+
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            // Ошибка входа
             response.put("success", false);
             response.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(response);
