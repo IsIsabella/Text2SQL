@@ -1,247 +1,186 @@
 package org.texttosql;
 
-import com.google.gson.Gson;
 import net.jcip.annotations.NotThreadSafe;
-import org.texttosql.common.LoginRequest;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 /**
- * Главный класс клиентского приложения, реализующий интерфейс входа в систему
+ * Стартовое окно приложения — выбор режима входа
  */
 @NotThreadSafe
 public class Main extends JFrame {
-    /**
-     * Поле для ввода логина
-     */
-    private final JTextField loginTextField;
-    /**
-     * Поле для ввода пароля
-     */
-    private final JPasswordField passwordField;
-    /**
-     * Флажок для запоминания логина
-     */
-    private final JCheckBox rememberMeCheckBox;
-    /**
-     * Имя файла для сохранения логина
-     */
-    private static final String SETTINGS_FILE = "settings.txt";
 
-    /**
-     * Конструктор окна входа в систему
-     */
+    private static Main instance;
+
     public Main() {
+        Main.instance = this;
         setTitle("Книжный магазин");
         try {
-            ImageIcon icon = new ImageIcon("Client/src/main/resources/IconBookStore.png");
-            setIconImage(icon.getImage());
-        } catch (Exception e) {
-            System.err.println("Иконка не найдена: " + e.getMessage());
+            setIconImage(new ImageIcon("Client/src/main/resources/IconBookStore.png").getImage());
+        } catch (Exception ignored) {
         }
 
-        setSize(400, 400);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-        setLayout(new BorderLayout());
+        this.setSize(520, 380);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setLocationRelativeTo(null);
+        this.setLayout(new GridBagLayout());
 
-        JPanel cardPanel = new JPanel(new GridBagLayout());
-        cardPanel.setBackground(new Color(0, 168, 239));
-        cardPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(15, 20, 15, 20);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
 
-        JPanel loginForm = new JPanel(new GridBagLayout());
-        loginForm.setBackground(Color.WHITE);
-        loginForm.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        GridBagConstraints formGbc = new GridBagConstraints();
-        formGbc.insets = new Insets(10, 0, 10, 0);
-        formGbc.anchor = GridBagConstraints.WEST;
-
-        JLabel loginLabel = new JLabel("Авторизация");
-        loginLabel.setFont(new Font("Roboto", Font.BOLD, 20));
-        formGbc.gridx = 0;
-        formGbc.gridy = 0;
-        formGbc.gridwidth = 2;
-        loginForm.add(loginLabel, formGbc);
-
-        JLabel label1 = new JLabel("Логин");
-        label1.setFont(new Font("Roboto", Font.PLAIN, 14));
-        formGbc.gridx = 0;
-        formGbc.gridy = 1;
-        formGbc.gridwidth = 1;
-        loginForm.add(label1, formGbc);
-
-        this.loginTextField = new JTextField(20);
-        this.loginTextField.setFont(new Font("Roboto", Font.PLAIN, 14));
-        this.loginTextField.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
-        formGbc.gridx = 1;
-        formGbc.gridy = 1;
-        loginForm.add(this.loginTextField, formGbc);
-
-        JLabel label2 = new JLabel("Пароль ");
-        label2.setFont(new Font("Roboto", Font.PLAIN, 14));
-        formGbc.gridx = 0;
-        formGbc.gridy = 2;
-        loginForm.add(label2, formGbc);
-
-        this.passwordField = new JPasswordField(20);
-        this.passwordField.setFont(new Font("Roboto", Font.PLAIN, 14));
-        this.passwordField.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
-        formGbc.gridx = 1;
-        formGbc.gridy = 2;
-        loginForm.add(this.passwordField, formGbc);
-
-        this.rememberMeCheckBox = new JCheckBox("Запомнить логин");
-        this.rememberMeCheckBox.setFont(new Font("Roboto", Font.PLAIN, 14));
-        this.rememberMeCheckBox.setBackground(Color.WHITE);
-        this.rememberMeCheckBox.setBorder(BorderFactory.createEmptyBorder());
-        formGbc.gridx = 0;
-        formGbc.gridy = 3;
-        formGbc.gridwidth = 2;
-        loginForm.add(this.rememberMeCheckBox, formGbc);
-
-        /**
-         * Кнопка для входа в систему
-         */
-        CustomButton logInButton = new CustomButton("Вход");
-        logInButton.setBackground(new Color(0, 168, 239));
-        logInButton.setForeground(Color.WHITE);
-        logInButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        formGbc.gridx = 0;
-        formGbc.gridy = 4;
-        formGbc.gridwidth = 2;
-        formGbc.anchor = GridBagConstraints.CENTER;
-        loginForm.add(logInButton, formGbc);
-
-        logInButton.addActionListener(e -> {
-            String username = this.loginTextField.getText();
-            String password = new String(this.passwordField.getPassword());
-            SwingWorker<Map<String, Object>, Void> worker = new SwingWorker<>() {
-                @Override
-                protected Map<String, Object> doInBackground() throws Exception {
-                    HttpClient client = HttpClient.newHttpClient();
-                    Gson gson = new Gson();
-                    LoginRequest reqBody = new LoginRequest(username, password);
-                    HttpRequest req = HttpRequest.newBuilder()
-                            .uri(java.net.URI.create("http://localhost:8080/api/login"))
-                            .header("Content-Type", "application/json")
-                            .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(reqBody)))
-                            .build();
-                    HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
-                    return gson.fromJson(resp.body(), Map.class);
-                }
-
-                @Override
-                protected void done() {
-                    try {
-                        Map<String, Object> response = get();
-                        if (Boolean.TRUE.equals(response.get("success"))) {
-                            String role = (String) response.get("role");
-
-                            // Проверка предупреждения
-                            Boolean downgraded = (Boolean) response.get("downgraded");
-                            String warning = (String) response.get("warning");
-                            if (Boolean.TRUE.equals(downgraded) && warning != null && !warning.trim().isEmpty()) {
-                                JOptionPane.showMessageDialog(
-                                        Main.this,
-                                        warning,
-                                        "Предупреждение безопасности",
-                                        JOptionPane.WARNING_MESSAGE
-                                );
-                            }
-                            new CreateQuery((String) response.get("username"), password).setVisible(true);
-                            dispose();
-                        } else {
-                            JOptionPane.showMessageDialog(null, response.get("message"),
-                                    "Ошибка", JOptionPane.ERROR_MESSAGE);
-                        }
-                    } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(null, "Ошибка: " + ex.getMessage(),
-                                "Ошибка", JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-            };
-            worker.execute();
-        });
-
-        this.rememberMeCheckBox.addActionListener(e -> {
-            if (this.rememberMeCheckBox.isSelected()) {
-                this.saveLogin(this.loginTextField.getText());
-            } else {
-                this.clearLogin();
-            }
-        });
-
+        // Заголовок
+        JLabel title = new JLabel("Книжный магазин", SwingConstants.CENTER);
+        title.setFont(new Font("Roboto", Font.BOLD, 34));
+        title.setForeground(new Color(0, 120, 215));
         gbc.gridx = 0;
         gbc.gridy = 0;
-        cardPanel.add(loginForm, gbc);
-        add(cardPanel, BorderLayout.CENTER);
+        gbc.gridwidth = 2;
+        this.add(title, gbc);
 
-        this.loadSavedLogin();
+        // Подзаголовок
+        JLabel subtitle = new JLabel("Выберите способ входа в систему", SwingConstants.CENTER);
+        subtitle.setFont(new Font("Roboto", Font.PLAIN, 16));
+        subtitle.setForeground(Color.DARK_GRAY);
+        gbc.gridy = 1;
+        gbc.insets = new Insets(5, 20, 50, 20);
+        this.add(subtitle, gbc);
+
+        // Кнопка входа через пользователя Windows
+        CustomButton ssoButton = new CustomButton("Войти как пользователь системы");
+        ssoButton.setPreferredSize(new Dimension(340, 58));
+        ssoButton.setFont(new Font("Roboto", Font.BOLD, 17));
+        ssoButton.addActionListener(e -> this.performSSOLogin());
+        gbc.gridy = 2;
+        gbc.gridwidth = 1;
+        gbc.insets = new Insets(10, 20, 15, 20);
+        this.add(ssoButton, gbc);
+
+        // Кнопка гость
+        CustomButton guestButton = new CustomButton("Войти как покупатель");
+        guestButton.setPreferredSize(new Dimension(340, 58));
+        guestButton.setFont(new Font("Roboto", Font.BOLD, 17));
+        guestButton.addActionListener(e -> this.openQueryWindow("Гость", "buyer"));
+        gbc.gridy = 3;
+        this.add(guestButton, gbc);
+
+        // Нижняя подпись
+        JLabel footer = new JLabel("Книжный магазин", SwingConstants.CENTER);
+        footer.setFont(new Font("Roboto", Font.PLAIN, 12));
+        footer.setForeground(Color.GRAY);
+        gbc.gridy = 4;
+        gbc.insets = new Insets(50, 20, 20, 20);
+        this.add(footer, gbc);
     }
 
     /**
-     * Загружает сохраненный логин из файла настроек
+     * Выполняет попытку автоматической SSO-авторизации (Single Sign-On) через сервер приложения.
+     * Если пользователь уже вошёл в систему — авторизация происходит без ввода пароля;
+     * иначе предлагается войти как покупатель
      */
-    private void loadSavedLogin() {
-        File file = new File(Main.SETTINGS_FILE);
-        if (file.exists() && file.length() > 0) {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    new FileInputStream(file), StandardCharsets.UTF_8))) {
-                String savedLogin = reader.readLine();
-                if (savedLogin != null && !savedLogin.trim().isEmpty()) {
-                    this.loginTextField.setText(savedLogin);
-                    this.rememberMeCheckBox.setSelected(true);
+    private void performSSOLogin() {
+        this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
+        SwingWorker<Void, Void> worker = new SwingWorker<>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                HttpClient client = HttpClient.newHttpClient();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("http://localhost:8080/api/login"))
+                        .GET()
+                        .build();
+
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 200) {
+                    var json = new com.google.gson.Gson().fromJson(response.body(), java.util.Map.class);
+                    boolean success = Boolean.TRUE.equals(json.get("success"));
+
+                    if (success) {
+                        String username = (String) json.get("username");
+                        String role = (String) json.get("role");
+                        String warning = (String) json.get("warning");
+
+                        SwingUtilities.invokeLater(() -> {
+                            if (warning != null && !warning.isBlank()) {
+                                JOptionPane.showMessageDialog(Main.this, warning,
+                                        "Информация", JOptionPane.INFORMATION_MESSAGE);
+                            }
+                            Main.this.openQueryWindow(username, role);
+                        });
+                    } else {
+                        String msg = (String) json.getOrDefault("message",
+                                "Неизвестная ошибка авторизации");
+                        SwingUtilities.invokeLater(() ->
+                                JOptionPane.showMessageDialog(Main.this,
+                                        "Авторизация не удалась:\n" + msg,
+                                        "Ошибка входа", JOptionPane.ERROR_MESSAGE));
+                    }
+                } else {
+                    SwingUtilities.invokeLater(() ->
+                            JOptionPane.showMessageDialog(Main.this,
+                                    "Не удалось подключиться к серверу (код " +
+                                            response.statusCode() + ")\n\n" +
+                                            "Попробуйте режим \"Войти как покупатель\"",
+                                    "Сервер недоступен", JOptionPane.ERROR_MESSAGE));
                 }
-            } catch (IOException e) {
-                System.err.println("Ошибка при загрузке логина: " + e.getMessage());
+                return null;
             }
-        }
+
+            @Override
+            protected void done() {
+                Main.this.setCursor(Cursor.getDefaultCursor());
+            }
+        };
+        worker.execute();
     }
 
     /**
-     * Сохраняет логин в файл настроек
+     * Выполняет открытие следующей панели
      *
-     * @param login логин для сохранения
+     * @param username имя пользователя
+     * @param role     роль пользователя
      */
-    private void saveLogin(String login) {
-        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-                new FileOutputStream(Main.SETTINGS_FILE), StandardCharsets.UTF_8))) {
-            writer.write(login);
-        } catch (IOException e) {
-            System.err.println("Ошибка при сохранении логина: " + e.getMessage());
-        }
+    private void openQueryWindow(String username, String role) {
+        SwingUtilities.invokeLater(() -> {
+            new CreateQuery(username, role).setVisible(true);
+            dispose();
+        });
     }
 
     /**
-     * Очищает сохраненный логин, удаляя файл настроек
-     */
-    private void clearLogin() {
-        File file = new File(Main.SETTINGS_FILE);
-        if (file.exists()) {
-            file.delete();
-        }
-    }
-
-    /**
-     * Точка входа для запуска клиентского приложения
-     *
-     * @param args аргументы командной строки
+     * Точка входа
      */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            Main main = new Main();
-            main.setVisible(true);
-            main.setLocationRelativeTo(null);
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception ignored) {
+            }
+            new Main().setVisible(true);
+        });
+    }
+
+    /**
+     * Показывает окно авторизации. Если оно уже открыто — просто поднимает его наверх,
+     * если закрыто — создаёт новое
+     */
+    public static void showMainWindow() {
+        SwingUtilities.invokeLater(() -> {
+            if (Main.instance == null || !Main.instance.isDisplayable()) {
+                new Main().setVisible(true);  // создаём новое
+            } else {
+                Main.instance.toFront();     // выводим на передний план
+                Main.instance.requestFocus();
+                if (Main.instance.getExtendedState() == JFrame.ICONIFIED) {
+                    Main.instance.setExtendedState(JFrame.NORMAL);  // разворачиваем, если свёрнуто
+                }
+            }
         });
     }
 }

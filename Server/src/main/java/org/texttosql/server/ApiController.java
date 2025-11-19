@@ -1,14 +1,9 @@
 package org.texttosql.server;
 
 import com.google.errorprone.annotations.ThreadSafe;
-import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.texttosql.common.LoginRequest;
+import org.springframework.web.bind.annotation.*;
 import org.texttosql.common.QueryRequest;
 import org.texttosql.common.ResultsResponse;
 import org.texttosql.common.SqlResponse;
@@ -17,8 +12,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * REST-контроллер для обработки запросов к API,
- * обрабатывает: вход, генерацию SQL, выполнение SQL
+ * REST-контроллер:
+ * • /api/login – SSO-вход;
+ * • /api/generate-sql – генерация SQL через локальный сервер Ollama;
+ * • /api/execute-sql – выполнение запроса
  */
 @RestController
 @RequestMapping("/api")
@@ -32,48 +29,30 @@ public class ApiController {
     private String rolesConfigPath;
 
     /**
-     * Для работы с JSON
-     */
-    private final Gson gson = new Gson();
-
-    /**
      * Обрабатывает вход пользователя
      *
-     * @param request логин и пароль
      * @return успех или ошибка
      * @throws Exception если произошла ошибка при аутентификации
      */
-    @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
-        Map<String, Object> response = new HashMap<>();
+    @GetMapping("/login")
+    public ResponseEntity<Map<String, Object>> login() {
+        Map<String, Object> resp = new HashMap<>();
         try {
-            ConnectWithDb authDb = new ConnectWithDb("localhost", request.getUsername(),
-                    request.getPassword(), "bookstore_secure");
+            ConnectWithDb db = new ConnectWithDb();
+            ConnectWithDb.DbUserInfo info = db.authenticateByWindowsSSO();
 
-            ConnectWithDb.DbUserInfo userInfo = authDb.authenticateUser();
-
-            if (userInfo == null) {
-                response.put("success", false);
-                response.put("message", "Неверный логин или пароль");
-                return ResponseEntity.badRequest().body(response);
+            resp.put("success", true);
+            resp.put("username", info.clientUsername());
+            resp.put("role", info.role());
+            if (info.warningMessage() != null) {
+                resp.put("warning", info.warningMessage());
             }
-
-            response.put("success", true);
-            response.put("username", userInfo.clientUsername());
-            response.put("role", userInfo.role());
-
-            // Добавляем флаг и сообщение
-            if (userInfo.downgraded()) {
-                response.put("downgraded", true);
-                response.put("warning", userInfo.warningMessage());
-            }
-
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(resp);
 
         } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+            resp.put("success", false);
+            resp.put("message", e.getMessage());
+            return ResponseEntity.status(401).body(resp);//401 - клиент не авторизован для доступа к ресурсу
         }
     }
 
@@ -112,31 +91,21 @@ public class ApiController {
     @PostMapping("/execute-sql")
     public ResponseEntity<ResultsResponse> executeSql(@RequestBody Map<String, String> body) {
         String sql = body.get("sql");
-        String clientUser = body.get("username");
-        String clientPass = body.get("password");
-
         try {
             if (sql == null || sql.trim().isEmpty()) {
                 throw new RuntimeException("SQL-запрос не может быть пустым");
             }
 
-            // Авторизация
-            ConnectWithDb auth = new ConnectWithDb("localhost",
-                    clientUser, clientPass, "bookstore_secure");
-            ConnectWithDb.DbUserInfo userInfo = auth.authenticateUser();
-            if (userInfo == null) {
-                return ResponseEntity.ok(ResultsResponse.error("Неверный логин или пароль"));
-            }
+            ConnectWithDb db = new ConnectWithDb();
+            ConnectWithDb.DbUserInfo userInfo = db.authenticateByWindowsSSO();
 
-            // Проверка SQL
-            new SqlValidator().validate(sql);
+            SqlValidator sqlValidator = new SqlValidator();
+            sqlValidator.validate(sql);
 
-            // Парсинг (расшифровка колонок)
             ParseQuery parser = new ParseQuery(sql, userInfo.dbUsername(), this.rolesConfigPath);
             String parsedSql = parser.parseSql();
 
-            // Выполнение
-            String result = auth.results(parsedSql, userInfo.dbUsername(), userInfo.dbPassword());
+            String result = db.results(parsedSql, userInfo.dbUsername(), userInfo.dbPassword());
 
             return ResponseEntity.ok(ResultsResponse.success(result));
 

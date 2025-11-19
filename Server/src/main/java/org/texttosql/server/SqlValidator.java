@@ -28,7 +28,7 @@ public class SqlValidator {
      * Список запрещенных схем/префиксов (системные таблицы PostgreSQL)
      */
     private static final String[] FORBIDDEN_SCHEMAS = {
-            "pg_", "information_schema", "pg_catalog", "pg_authid", "pg_user", "pg_roles"
+            "pg_", "information_schema", "pg_catalog", "pg_authid", "pg_user", "pg_roles", "users"
     };
 
     /**

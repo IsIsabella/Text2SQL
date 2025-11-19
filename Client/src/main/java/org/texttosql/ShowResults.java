@@ -21,13 +21,10 @@ public class ShowResults extends JFrame {
     /**
      * Конструктор окна результатов
      *
-     * @param host         хост базы данных
-     * @param username     имя пользователя
-     * @param password     пароль пользователя
-     * @param databaseName название базы данных
-     * @param results      результаты выполнения SQL-запроса в текстовом формате
+     * @param username имя пользователя
+     * @param results  результаты выполнения SQL-запроса в текстовом формате
      */
-    public ShowResults(String host, String username, String password, String databaseName, String results) {
+    public ShowResults(String username, String role, String results) {
         setTitle("Книжный магазин");
         try {
             ImageIcon icon = new ImageIcon("Client/src/main/resources/IconBookStore.png");
@@ -36,33 +33,49 @@ public class ShowResults extends JFrame {
             System.err.println("Иконка не найдена: " + e.getMessage());
         }
 
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setLocationRelativeTo(null);
-        setLayout(new BorderLayout());
+        this.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        this.setLocationRelativeTo(null);
+        this.setLayout(new BorderLayout());
 
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(new Color(0, 120, 215));
         headerPanel.setPreferredSize(new Dimension(getWidth(), 70));
 
-        JLabel titleLabel = new JLabel("Книжный магазин", SwingConstants.LEFT);
-        titleLabel.setFont(new Font("Roboto", Font.BOLD, 24));
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
-
+        // Иконка слева
         try {
             ImageIcon icon = new ImageIcon("Client/src/main/resources/IconBookStore.png");
             Image scaledImage = icon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
             JLabel iconLabel = new JLabel(new ImageIcon(scaledImage));
             iconLabel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 10));
             headerPanel.add(iconLabel, BorderLayout.WEST);
-        } catch (Exception e) {
-            System.err.println("Иконка не найдена: " + e.getMessage());
+        } catch (Exception ignored) {
         }
 
+        // Название приложения
+        JLabel titleLabel = new JLabel("Книжный магазин", SwingConstants.LEFT);
+        titleLabel.setFont(new Font("Roboto", Font.BOLD, 24));
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(15, 10, 15, 20));
         headerPanel.add(titleLabel, BorderLayout.CENTER);
-        add(headerPanel, BorderLayout.NORTH);
 
+        // Пользователь и роль указываются справа
+        String displayName = username != null && !username.isBlank() ? username.trim() : "Гость";
+        String displayRole = switch (role) {
+            case "admin" -> "Администратор";
+            case "seller" -> "Продавец";
+            default -> "Покупатель";
+        };
+
+        JLabel userInfo = new JLabel(displayName + " (" + displayRole + ")", SwingConstants.RIGHT);
+        userInfo.setFont(new Font("Roboto", Font.PLAIN, 18));
+        userInfo.setForeground(Color.WHITE);
+        userInfo.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 30));
+        headerPanel.add(userInfo, BorderLayout.EAST);
+
+        this.add(headerPanel, BorderLayout.NORTH);
+
+        // Таблица результатов
         this.resultsTable = new JTable();
         this.resultsTable.setFont(new Font("Roboto", Font.PLAIN, 14));
         this.resultsTable.setRowHeight(28);
@@ -73,6 +86,7 @@ public class ShowResults extends JFrame {
         this.resultsTable.setSelectionForeground(Color.WHITE);
         this.resultsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
+        // Чередование цветов строк
         this.resultsTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             private final Color evenColor = new Color(245, 248, 250);
             private final Color oddColor = Color.WHITE;
@@ -85,15 +99,16 @@ public class ShowResults extends JFrame {
                 if (!isSelected) {
                     c.setBackground((row % 2 == 0) ? evenColor : oddColor);
                 }
-                setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
-                setHorizontalAlignment(SwingConstants.LEFT);
+                this.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
+                this.setHorizontalAlignment(SwingConstants.LEFT);
                 return c;
             }
         });
 
+        // Заголовок таблицы
         JTableHeader header = this.resultsTable.getTableHeader();
         header.setBackground(new Color(0, 120, 215));
-        header.setForeground(Color.WHITE);
+        header.setForeground(Color.BLACK);
         header.setFont(new Font("Roboto", Font.BOLD, 15));
         header.setPreferredSize(new Dimension(header.getWidth(), 35));
         ((DefaultTableCellRenderer) header.getDefaultRenderer())
@@ -103,8 +118,9 @@ public class ShowResults extends JFrame {
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scroll.setBorder(BorderFactory.createEmptyBorder());
-        add(scroll, BorderLayout.CENTER);
+        this.add(scroll, BorderLayout.CENTER);
 
+        // Загрузка данных в фоне
         new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() {
@@ -117,12 +133,14 @@ public class ShowResults extends JFrame {
                 try {
                     get();
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(null, "Ошибка: " + ex.getMessage(),
+                    JOptionPane.showMessageDialog(ShowResults.this,
+                            "Ошибка при отображении результатов: " + ex.getMessage(),
                             "Ошибка", JOptionPane.ERROR_MESSAGE);
                 }
             }
         }.execute();
 
+        // Автоподгонка колонок при изменении размера окна
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
@@ -139,7 +157,8 @@ public class ShowResults extends JFrame {
     private void loadResults(String result) {
         if (result == null || result.isBlank()) {
             SwingUtilities.invokeLater(() ->
-                    JOptionPane.showMessageDialog(this, "Результат пуст", "Информация", JOptionPane.INFORMATION_MESSAGE));
+                    JOptionPane.showMessageDialog(this, "Результат пуст",
+                            "Информация", JOptionPane.INFORMATION_MESSAGE));
             return;
         }
 
@@ -165,19 +184,27 @@ public class ShowResults extends JFrame {
      * Автоматически распределяет ширину колонок таблицы по ширине окна
      */
     private void adjustColumnWidthsToFitWindow() {
-        if (this.resultsTable.getColumnCount() == 0) return;
+        if (resultsTable.getColumnCount() == 0) return;
 
-        int tableWidth = getWidth() - 60;
-        int columnCount = this.resultsTable.getColumnCount();
-        if (columnCount == 0) return;
+        // Учитываем ширину JScrollPane, а не всего окна
+        int availableWidth = resultsTable.getParent().getWidth(); // это viewport
+        if (availableWidth <= 0) availableWidth = getWidth() - 100;
 
-        int baseWidth = tableWidth / columnCount;
+        int columnCount = resultsTable.getColumnCount();
+        int totalGaps = 1; // отступы между колонками
+        int baseWidth = (availableWidth - totalGaps) / columnCount;
 
-        for (int column = 0; column < columnCount; column++) {
-            this.resultsTable.getColumnModel().getColumn(column).setPreferredWidth(baseWidth);
+        // Минимум 100 пикселей на колонку, чтобы не было слишком узко
+        int minWidth = 120;
+        if (baseWidth < minWidth) {
+            baseWidth = minWidth;
         }
 
-        this.resultsTable.revalidate();
-        this.resultsTable.repaint();
+        for (int i = 0; i < columnCount; i++) {
+            resultsTable.getColumnModel().getColumn(i).setPreferredWidth(baseWidth);
+        }
+
+        resultsTable.revalidate();
+        resultsTable.repaint();
     }
 }

@@ -40,38 +40,38 @@ public class CustomButton extends JButton {
      */
     public CustomButton(String text) {
         super(text);
-        setFont(new Font("Roboto", Font.BOLD, 14));
-        setForeground(Color.WHITE);
-        setContentAreaFilled(true);
-        setFocusPainted(false);
-        setBorderPainted(false);
-        setBackground(this.defaultColor);
-        setCursor(new Cursor(Cursor.HAND_CURSOR));
+        this.setFont(new Font("Roboto", Font.BOLD, 14));
+        this.setForeground(Color.WHITE);
+        this.setContentAreaFilled(true);
+        this.setFocusPainted(false);
+        this.setBorderPainted(false);
+        this.setBackground(this.defaultColor);
+        this.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        addMouseListener(new MouseAdapter() {
+        this.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
                 CustomButton.this.isHovered = true;
-                repaint();
+                CustomButton.this.repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
                 CustomButton.this.isHovered = false;
                 CustomButton.this.isPressed = false;
-                repaint();
+                CustomButton.this.repaint();
             }
 
             @Override
             public void mousePressed(MouseEvent e) {
                 CustomButton.this.isPressed = true;
-                repaint();
+                CustomButton.this.repaint();
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
                 CustomButton.this.isPressed = false;
-                repaint();
+                CustomButton.this.repaint();
             }
         });
     }

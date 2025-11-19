@@ -35,6 +35,52 @@ public class DataNormalizer {
         NAME_MAPPING.put("катя", "екатерина");
         NAME_MAPPING.put("женя", "евгений");
         NAME_MAPPING.put("юра", "юрий");
+        NAME_MAPPING.put("таня", "татьяна");
+        NAME_MAPPING.put("настя", "анастасия");
+        NAME_MAPPING.put("ксюша", "ксения");
+        NAME_MAPPING.put("оля", "ольга");
+        NAME_MAPPING.put("вика", "виктория");
+        NAME_MAPPING.put("лиза", "елизавета");
+        NAME_MAPPING.put("соня", "софия");
+        NAME_MAPPING.put("даша", "дарья");
+        NAME_MAPPING.put("миша", "михаил");
+        NAME_MAPPING.put("кирилл", "кирилл");
+        NAME_MAPPING.put("вова", "владимир");
+        NAME_MAPPING.put("света", "светлана");
+        NAME_MAPPING.put("наташа", "наталья");
+        NAME_MAPPING.put("игорь", "игорь");
+        NAME_MAPPING.put("серёжа", "сергей");
+        NAME_MAPPING.put("андрей", "андрей");
+        NAME_MAPPING.put("рома", "роман");
+        NAME_MAPPING.put("паша", "павел");
+        NAME_MAPPING.put("витя", "виталий");
+        NAME_MAPPING.put("никита", "никита");
+        NAME_MAPPING.put("толя", "анатолий");
+        NAME_MAPPING.put("валера", "валерий");
+        NAME_MAPPING.put("гена", "геннадий");
+        NAME_MAPPING.put("костя", "константин");
+        NAME_MAPPING.put("федя", "федор");
+        NAME_MAPPING.put("стас", "станислав");
+        NAME_MAPPING.put("влад", "владислав");
+        NAME_MAPPING.put("женя", "евгения"); // женский вариант
+        NAME_MAPPING.put("юля", "юлия");
+        NAME_MAPPING.put("лена", "елена");
+        NAME_MAPPING.put("ира", "ирина");
+        NAME_MAPPING.put("люда", "людмила");
+        NAME_MAPPING.put("марина", "марина");
+        NAME_MAPPING.put("алина", "алина");
+        NAME_MAPPING.put("полина", "полина");
+        NAME_MAPPING.put("вася", "василий");
+        NAME_MAPPING.put("петя", "петр");
+        NAME_MAPPING.put("гриша", "григорий");
+        NAME_MAPPING.put("артем", "артем");
+        NAME_MAPPING.put("даня", "даниил");
+        NAME_MAPPING.put("слава", "вячеслав");
+        NAME_MAPPING.put("мила", "людмила");
+        NAME_MAPPING.put("аня", "анна");
+        NAME_MAPPING.put("лиля", "лилия");
+        NAME_MAPPING.put("аля", "альбина");
+        NAME_MAPPING.put("надя", "надежда");
     }
 
     /**
