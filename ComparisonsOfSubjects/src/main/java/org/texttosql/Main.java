@@ -1,7 +1,5 @@
 package org.texttosql;
 
-import org.apache.commons.text.similarity.LevenshteinDistance;
-
 /**
  * Пример использования.
  */
