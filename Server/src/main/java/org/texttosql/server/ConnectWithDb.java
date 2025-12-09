@@ -8,6 +8,7 @@ import org.texttosql.MatchStatus;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Основной класс для взаимодействия с PostgreSQL.
@@ -26,6 +27,20 @@ public class ConnectWithDb {
      * Название базы данных
      */
     private static final String DATABASE = "bookstore_secure";
+
+    /**
+     * Карта с паролями для ролей БД
+     */
+    private final Map<String, String> dbPasswords;
+
+    /**
+     * Конструктор с инициализацией паролей
+     *
+     * @param dbPasswords карта с паролями для ролей (admin, seller, buyer)
+     */
+    public ConnectWithDb(Map<String, String> dbPasswords) {
+        this.dbPasswords = dbPasswords;
+    }
 
     /**
      * Формирует JDBC URL подключения к PostgreSQL с указанием кодировки UTF-8
@@ -140,7 +155,7 @@ public class ConnectWithDb {
                 """;
         for (String role : roles) {
             String keySuffix = role + "_role";
-            try (Connection conn = DriverManager.getConnection(getUrl(), role, role + "_pass");
+            try (Connection conn = DriverManager.getConnection(getUrl(), role, getPasswordForRole(role));
                  PreparedStatement ps = conn.prepareStatement(sql)) {
 
                 ps.setString(1, keySuffix);
@@ -170,6 +185,21 @@ public class ConnectWithDb {
     }
 
     /**
+     * Получает пароль для указанной роли
+     *
+     * @param role роль пользователя БД
+     * @return пароль для подключения
+     * @throws RuntimeException если пароль для роли не найден
+     */
+    private String getPasswordForRole(String role) {
+        String password = dbPasswords.get(role);
+        if (password == null) {
+            throw new RuntimeException("Пароль для роли '" + role + "' не найден в конфигурации");
+        }
+        return password;
+    }
+
+    /**
      * Находит лучшее совпадение, используя EntityResolver
      *
      * @param local      пользователь, который совершает авторизацию
@@ -190,7 +220,7 @@ public class ConnectWithDb {
         double bestProb = 0.0;
 
         for (ConnectWithDb.UserCandidate candidate : candidates) {
-            double probability = EntityResolver.calculateMatchProbability(local, candidate.subject);
+            double probability = EntityResolver.calculateMatchProbabilityCustom(local, candidate.subject);
             if (EntityResolver.getMatchStatus(probability) == MatchStatus.MATCH && probability > bestProb) {
                 bestProb = probability;
                 best = candidate;
@@ -294,26 +324,24 @@ public class ConnectWithDb {
          */
         public String dbUsername() {
             return switch (role) {
-                case "admin" -> "admin";
-                case "seller" -> "seller";
-                case "buyer" -> "buyer";
+                case "admin", "seller", "buyer" -> role;
                 default -> throw new IllegalArgumentException("Неизвестная роль: " + role);
             };
         }
 
         /**
          * Возвращает пароль пользователя базы данных в зависимости от роли
+         * Использует внешний источник паролей
          *
          * @return пароль пользователя БД
          * @throws Exception при ошибке выполнения
          */
         public String dbPassword() {
-            return switch (role) {
-                case "admin" -> "admin_pass";
-                case "seller" -> "seller_pass";
-                case "buyer" -> "buyer_pass";
-                default -> throw new IllegalArgumentException("Неизвестная роль: " + role);
-            };
+            // Этот метод больше не используется напрямую,
+            // так как пароли теперь хранятся в конфигурации
+            throw new UnsupportedOperationException(
+                    "Используйте ConnectWithDb.getPasswordForRole() вместо этого метода"
+            );
         }
     }
 }

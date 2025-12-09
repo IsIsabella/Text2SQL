@@ -8,11 +8,22 @@ import javax.annotation.concurrent.Immutable;
 
 /**
  * Основной класс для принятия решения о схожести субъектов
+ * Поддерживает два режима:
+ * 1. CUSTOM
+ * 2. APACHE_COMMONS
  */
 @Immutable
 public class EntityResolver {
-    private static final LevenshteinDistance LEVENSHTEIN = new LevenshteinDistance();
-    private static final JaroWinklerSimilarity JARO = new JaroWinklerSimilarity();
+
+    // Кастомные метрики
+    private static final LevenshteinDistance CUSTOM_LEVENSHTEIN = new LevenshteinDistance();
+    private static final JaroWinklerSimilarity CUSTOM_JARO = new JaroWinklerSimilarity();
+
+    // Apache Commons Text метрики
+    private static final org.apache.commons.text.similarity.LevenshteinDistance APACHE_LEVENSHTEIN
+            = org.apache.commons.text.similarity.LevenshteinDistance.getDefaultInstance();
+    private static final org.apache.commons.text.similarity.JaroWinklerSimilarity APACHE_JARO
+            = new org.apache.commons.text.similarity.JaroWinklerSimilarity();
 
     // Назначаем веса признаков
     private static final double WEIGHT_LAST = 0.2;
@@ -23,22 +34,69 @@ public class EntityResolver {
     private static final double WEIGHT_POSITION = 0.1;
 
     /**
-     * Вычисляет нормализованное сходство на основе расстояния Левенштейна
+     * Вычисляет вероятность совпадения двух субъектов, используя кастомные алгоритмы
      *
-     * @param s1 первая строка
-     * @param s2 вторая строка
-     * @return нормализованное сходство на основе расстояния Левенштейна
+     * @param subject1 первый субъект
+     * @param subject2 второй субъект
+     * @return вероятность совпадения двух субъектов
      */
-    private static double LevenshtainSimilarity(@Nullable String s1, @Nullable String s2) {
-        if (s1 == null || s2 == null) {
-            return 0.0;
-        }
-        if (s1.equals(s2)) {
-            return 1.0;
-        }
-        int dist = EntityResolver.LEVENSHTEIN.apply(s1, s2);
-        int maxLen = Math.max(s1.length(), s2.length());
-        return 1.0 - ((double) dist / maxLen);
+    public static double calculateMatchProbabilityCustom(AccessSubject subject1, AccessSubject subject2) {
+        AccessSubject norm1 = DataNormalizer.normalize(subject1);
+        AccessSubject norm2 = DataNormalizer.normalize(subject2);
+
+        double lastNameSim = EntityResolver.JaroWinklerSimilarity(norm1.getLastName(), norm2.getLastName());
+        double firstNameSim = EntityResolver.JaroWinklerSimilarity(norm1.getFirstName(), norm2.getFirstName());
+        double middleNameSim = (norm1.getMiddleName() != null && norm2.getMiddleName() != null)
+                ? EntityResolver.JaroWinklerSimilarity(norm1.getMiddleName(), norm2.getMiddleName()) : 0.0;
+        double emailSim = EntityResolver.LevenshtainSimilarity(norm1.getEmail(), norm2.getEmail());
+        double phoneSim = EntityResolver.LevenshtainSimilarity(norm1.getPhone(), norm2.getPhone());
+        double posSim = EntityResolver.JaroWinklerSimilarity(norm1.getPosition(), norm2.getPosition());
+
+        double rarity = SurnameRarity.getRarityMultiplier(norm1.getLastName());
+
+        double fioProb = (EntityResolver.WEIGHT_LAST * lastNameSim * rarity) +
+                (EntityResolver.WEIGHT_FIRST * firstNameSim) +
+                (EntityResolver.WEIGHT_MIDDLE * middleNameSim);
+
+        double probability = fioProb +
+                EntityResolver.WEIGHT_EMAIL * emailSim +
+                EntityResolver.WEIGHT_PHONE * phoneSim +
+                EntityResolver.WEIGHT_POSITION * posSim;
+
+        return Math.min(probability, 1.0);
+    }
+
+    /**
+     * Вычисляет вероятность совпадения двух субъектов, используя алгоритмы из org.apache.commons
+     *
+     * @param subject1 первый субъект
+     * @param subject2 второй субъект
+     * @return вероятность совпадения двух субъектов
+     */
+    public static double calculateMatchProbabilityApache(AccessSubject subject1, AccessSubject subject2) {
+        AccessSubject norm1 = DataNormalizer.normalize(subject1);
+        AccessSubject norm2 = DataNormalizer.normalize(subject2);
+
+        double lastNameSim = EntityResolver.apacheJaroWinklerSimilarity(norm1.getLastName(), norm2.getLastName());
+        double firstNameSim = EntityResolver.apacheJaroWinklerSimilarity(norm1.getFirstName(), norm2.getFirstName());
+        double middleNameSim = (norm1.getMiddleName() != null && norm2.getMiddleName() != null)
+                ? EntityResolver.apacheJaroWinklerSimilarity(norm1.getMiddleName(), norm2.getMiddleName()) : 0.0;
+        double emailSim = EntityResolver.apacheLevenshteinSimilarity(norm1.getEmail(), norm2.getEmail());
+        double phoneSim = EntityResolver.apacheLevenshteinSimilarity(norm1.getPhone(), norm2.getPhone());
+        double posSim = EntityResolver.apacheJaroWinklerSimilarity(norm1.getPosition(), norm2.getPosition());
+
+        double rarity = SurnameRarity.getRarityMultiplier(norm1.getLastName());
+
+        double fioProb = (EntityResolver.WEIGHT_LAST * lastNameSim * rarity) +
+                (EntityResolver.WEIGHT_FIRST * firstNameSim) +
+                (EntityResolver.WEIGHT_MIDDLE * middleNameSim);
+
+        double probability = fioProb +
+                EntityResolver.WEIGHT_EMAIL * emailSim +
+                EntityResolver.WEIGHT_PHONE * phoneSim +
+                EntityResolver.WEIGHT_POSITION * posSim;
+
+        return Math.min(probability, 1.0);
     }
 
     /**
@@ -54,44 +112,69 @@ public class EntityResolver {
         }
         if (s1.equals(s2)) {
             return 1.0;
+        } else {
+            return EntityResolver.CUSTOM_JARO.apply(s1, s2);
         }
-        return EntityResolver.JARO.apply(s1, s2);
     }
 
     /**
-     * Вычисляет вероятность совпадения двух субъектов
+     * Вычисляет нормализованное сходство на основе расстояния Левенштейна
      *
-     * @param subject1 первый субъект
-     * @param subject2 второй субъект
-     * @return вероятность совпадения двух субъектов
+     * @param s1 первая строка
+     * @param s2 вторая строка
+     * @return нормализованное сходство на основе расстояния Левенштейна
      */
-    public static double calculateMatchProbability(AccessSubject subject1, AccessSubject subject2) {
-        // Нормализуем данные
-        AccessSubject norm1 = DataNormalizer.normalize(subject1);
-        AccessSubject norm2 = DataNormalizer.normalize(subject2);
-
-        // Вычисляем сходства по всем параметрам
-        double lastNameSim = EntityResolver.JaroWinklerSimilarity(norm1.getLastName(), norm2.getLastName());
-        double firstNameSim = EntityResolver.JaroWinklerSimilarity(norm1.getFirstName(), norm2.getFirstName());
-        double middleNameSim = 0.0;
-        if (norm1.getMiddleName() != null && norm2.getMiddleName() != null) {
-            middleNameSim = EntityResolver.JaroWinklerSimilarity(norm1.getMiddleName(), norm2.getMiddleName());
+    private static double LevenshtainSimilarity(@Nullable String s1, @Nullable String s2) {
+        if (s1 == null || s2 == null) {
+            return 0.0;
         }
-        double emailSim = EntityResolver.LevenshtainSimilarity(norm1.getEmail(), norm2.getEmail());
-        double phoneSim = EntityResolver.LevenshtainSimilarity(norm1.getPhone(), norm2.getPhone());
-        double posSim = EntityResolver.JaroWinklerSimilarity(norm1.getPosition(), norm2.getPosition());
+        if (s1.equals(s2)) {
+            return 1.0;
+        }
+        int dist = EntityResolver.CUSTOM_LEVENSHTEIN.apply(s1, s2);
 
-        // Множитель редкости только для фамилии
-        double rarity = SurnameRarity.getRarityMultiplier(norm1.getLastName());
+        int maxLen = Math.max(s1.length(), s2.length());
+        return 1.0 - ((double) dist / maxLen);
+    }
 
-        // Взвешенная сумма
-        double fioProb = (EntityResolver.WEIGHT_LAST * lastNameSim * rarity) +
-                EntityResolver.WEIGHT_FIRST * firstNameSim + EntityResolver.WEIGHT_MIDDLE * middleNameSim;
-        double probability = fioProb + EntityResolver.WEIGHT_EMAIL * emailSim +
-                EntityResolver.WEIGHT_PHONE * phoneSim + EntityResolver.WEIGHT_POSITION * posSim;
+    /**
+     * Вычисляет сходство на основе Jaro-Winkler
+     *
+     * @param s1 первая строка
+     * @param s2 вторая строка
+     * @return нормализованное сходство на основе Jaro-Winkler
+     */
+    private static double apacheJaroWinklerSimilarity(@Nullable String s1, @Nullable String s2) {
+        if (s1 == null || s2 == null) {
+            return 0.0;
+        }
+        if (s1.equals(s2)) {
+            return 1.0;
+        } else {
+            return EntityResolver.APACHE_JARO.apply(s1, s2);
+        }
+    }
 
-        // Нормализуем, чтобы не выходило за 1
-        return Math.min(probability, 1.0);
+    /**
+     * Вычисляет нормализованное сходство на основе расстояния Левенштейна
+     *
+     * @param s1 первая строка
+     * @param s2 вторая строка
+     * @return нормализованное сходство на основе расстояния Левенштейна
+     */
+    private static double apacheLevenshteinSimilarity(@Nullable String s1, @Nullable String s2) {
+        if (s1 == null || s2 == null) {
+            return 0.0;
+        }
+        if (s1.equals(s2)) {
+            return 1.0;
+        }
+        Integer dist = EntityResolver.APACHE_LEVENSHTEIN.apply(s1, s2);
+        if (dist == null) {
+            return 0.0;
+        }
+        int maxLen = Math.max(s1.length(), s2.length());
+        return 1.0 - ((double) dist / maxLen);
     }
 
     /**
@@ -103,7 +186,8 @@ public class EntityResolver {
     public static MatchStatus getMatchStatus(double probability) {
         if (probability >= 0.9) {
             return MatchStatus.MATCH;
-        } else if (probability >= 0.7) {
+        }
+        if (probability >= 0.7) {
             return MatchStatus.MANUAL_VERIFICATION;
         } else {
             return MatchStatus.DIFFERENT;

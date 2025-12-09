@@ -1,0 +1,5 @@
+db:
+  roles:
+    admin: ${DB_ADMIN_PASS:admin_pass}
+    seller: ${DB_SELLER_PASS:seller_pass}
+    buyer: ${DB_BUYER_PASS:buyer_pass}

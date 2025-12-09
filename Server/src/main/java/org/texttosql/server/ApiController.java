@@ -28,6 +28,23 @@ public class ApiController {
     @Value("${roles.config.path}")
     private String rolesConfigPath;
 
+    @Value("${db.roles.admin}")
+    private String adminPassword;
+
+    @Value("${db.roles.seller}")
+    private String sellerPassword;
+
+    @Value("${db.roles.buyer}")
+    private String buyerPassword;
+
+    private ConnectWithDb createConnectWithDb() {
+        Map<String, String> dbPasswords = Map.of(
+                "admin", adminPassword,
+                "seller", sellerPassword,
+                "buyer", buyerPassword);
+        return new ConnectWithDb(dbPasswords);
+    }
+
     /**
      * Обрабатывает вход пользователя
      *
@@ -38,7 +55,7 @@ public class ApiController {
     public ResponseEntity<Map<String, Object>> login() {
         Map<String, Object> resp = new HashMap<>();
         try {
-            ConnectWithDb db = new ConnectWithDb();
+            ConnectWithDb db = this.createConnectWithDb();
             ConnectWithDb.DbUserInfo info = db.authenticateByWindowsSSO();
 
             resp.put("success", true);
@@ -96,7 +113,7 @@ public class ApiController {
                 throw new RuntimeException("SQL-запрос не может быть пустым");
             }
 
-            ConnectWithDb db = new ConnectWithDb();
+            ConnectWithDb db = createConnectWithDb();
             ConnectWithDb.DbUserInfo userInfo = db.authenticateByWindowsSSO();
 
             SqlValidator sqlValidator = new SqlValidator();
@@ -104,6 +121,12 @@ public class ApiController {
 
             ParseQuery parser = new ParseQuery(sql, userInfo.dbUsername(), this.rolesConfigPath);
             String parsedSql = parser.parseSql();
+
+            Map<String, String> dbPasswords = Map.of(
+                    "admin", adminPassword,
+                    "seller", sellerPassword,
+                    "buyer", buyerPassword
+            );
 
             String result = db.results(parsedSql, userInfo.dbUsername(), userInfo.dbPassword());
 
