@@ -366,8 +366,9 @@ public class CreateQuery extends JFrame {
             @Override
             protected ResultsResponse doInBackground() throws Exception {
                 HttpClient client = HttpClient.newHttpClient();
-                Map<String, String> body = new HashMap<>();
+                Map<String, Object> body = new HashMap<>();
                 body.put("sql", sql);
+                body.put("isGuest", role.equals("buyer") && username.equals("Гость"));
 
                 HttpRequest req = HttpRequest.newBuilder()
                         .uri(java.net.URI.create(CreateQuery.SERVER_URL + "/execute-sql"))

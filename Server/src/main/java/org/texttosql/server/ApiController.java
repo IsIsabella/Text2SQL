@@ -106,15 +106,25 @@ public class ApiController {
      * @throws Exception если произошла ошибка при выполнении запроса
      */
     @PostMapping("/execute-sql")
-    public ResponseEntity<ResultsResponse> executeSql(@RequestBody Map<String, String> body) {
-        String sql = body.get("sql");
+    public ResponseEntity<ResultsResponse> executeSql(@RequestBody Map<String, Object> body) {
+        String sql = (String) body.get("sql");
+        Boolean isGuest = (Boolean) body.get("isGuest");
+
         try {
             if (sql == null || sql.trim().isEmpty()) {
                 throw new RuntimeException("SQL-запрос не может быть пустым");
             }
 
             ConnectWithDb db = createConnectWithDb();
-            ConnectWithDb.DbUserInfo userInfo = db.authenticateByWindowsSSO();
+            ConnectWithDb.DbUserInfo userInfo;
+
+            if (isGuest != null && isGuest) {
+                // Если гость, используем фиктивные данные
+                userInfo = new ConnectWithDb.DbUserInfo("Гость", "buyer");
+            } else {
+                // Иначе пытаемся Windows SSO
+                userInfo = db.authenticateByWindowsSSO();
+            }
 
             SqlValidator sqlValidator = new SqlValidator();
             sqlValidator.validate(sql);
@@ -122,13 +132,20 @@ public class ApiController {
             ParseQuery parser = new ParseQuery(sql, userInfo.dbUsername(), this.rolesConfigPath);
             String parsedSql = parser.parseSql();
 
+            // Используем пароли из конфигурации, а не из userInfo
             Map<String, String> dbPasswords = Map.of(
                     "admin", adminPassword,
                     "seller", sellerPassword,
                     "buyer", buyerPassword
             );
 
-            String result = db.results(parsedSql, userInfo.dbUsername(), userInfo.dbPassword());
+            // Получаем пароль для роли из конфигурации
+            String password = dbPasswords.get(userInfo.role());
+            if (password == null) {
+                throw new RuntimeException("Пароль для роли '" + userInfo.role() + "' не найден");
+            }
+
+            String result = db.results(parsedSql, userInfo.dbUsername(), password);
 
             return ResponseEntity.ok(ResultsResponse.success(result));
 
