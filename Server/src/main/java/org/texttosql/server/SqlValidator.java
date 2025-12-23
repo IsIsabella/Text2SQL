@@ -32,11 +32,10 @@ public class SqlValidator {
     };
 
     /**
-     * Список разрешенных таблиц в базе данных bookstore
+     * Список разрешенных таблиц в базе данных bookstore_secure
      */
     private static final Set<String> ALLOWED_TABLES = new HashSet<>(Arrays.asList(
-            "authors", "books", "publishinghouse", "circulation", "cheque", "wrote", "contains"
-    ));
+            "authors", "books", "publishinghouse", "circulation", "cheque", "wrote", "contains"));
 
     /**
      * Валидирует SQL-запрос

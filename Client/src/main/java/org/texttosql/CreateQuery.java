@@ -414,3 +414,4 @@ public class CreateQuery extends JFrame {
         }.execute();
     }
 }
+
