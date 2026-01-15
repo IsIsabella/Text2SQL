@@ -24,7 +24,6 @@ public class DataNormalizer {
 
     /**
      * Словарь с сокращенными и полными формами имен
-     * ToDO: решить каким образом будет храниться этот словарь, и откуда будет браться эта информация
      */
     private static final Map<String, String> NAME_MAPPING = new HashMap<>();
     static {

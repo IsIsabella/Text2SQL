@@ -11,7 +11,6 @@ import java.util.Map;
 public class PositionSynonyms {
     /**
      * Словарь с сокращенными/транслитерированными и полными названиями должностей
-     * ToDO: решить каким образом будет храниться этот словарь, и откуда будет браться эта информация
      */
     private static final Map<String, String> SYNONYMS = new HashMap<>();
 

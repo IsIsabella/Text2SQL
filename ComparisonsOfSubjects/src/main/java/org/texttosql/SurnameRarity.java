@@ -12,7 +12,6 @@ import java.util.Map;
 public class SurnameRarity {
     /**
      * Частотный словарь фамилий
-     * ToDO: решить каким образом будет храниться этот словарь, и откуда будет браться эта информация
      */
     private static final Map<String, Double> SURNAME_FREQUENCY = new HashMap<>();
 
