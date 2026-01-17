@@ -24,8 +24,11 @@ public class ConnectToDeepSeek {
     private static final Logger logger = LoggerFactory.getLogger(ConnectToDeepSeek.class);
     /**
      * Взаимодействия с локальным сервером ollama для генерации SQL
+     * http://localhost:11434/api/chat
+     * http://hv1.seclab.local:11434/api/chat
+     *
      */
-    private static final String OLLAMA_URL = "http://localhost:11434/api/chat";
+    private static final String OLLAMA_URL = "http://hv1.seclab.local:11434/api/chat";
     /**
      * Сериализации/десериализации JSON
      */
